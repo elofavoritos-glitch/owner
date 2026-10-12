@@ -41,9 +41,9 @@ export default async function Assistente() {
               <li>Ver relacionamento: <em>&quot;já falamos com a AgroInsumos?&quot;</em></li>
               <li>Registrar um contato: <em>&quot;registra: liguei pra MetalForte, pediram cotação&quot;</em></li>
             </ul>
-            <p><strong>🎤 Falar em vez de digitar:</strong> toque no microfone e fale. Funciona melhor no
-            Chrome, Edge e Android; no primeiro uso o navegador pede permissão de microfone. No Safari/iPhone
-            o recurso pode não aparecer.</p>
+            <p><strong>🎤 Falar em vez de digitar:</strong> toque no microfone, fale e toque de novo para
+            parar — a transcrição aparece em 1-2 segundos. Funciona em qualquer navegador, incluindo o
+            iPhone/Safari. No primeiro uso, autorize o microfone.</p>
             <p style={{ color: "#64748B", fontSize: 13 }}>O assistente respeita suas permissões: um comercial
             vê a própria carteira; um gestor vê o time todo.</p>
           </AjudaButton>

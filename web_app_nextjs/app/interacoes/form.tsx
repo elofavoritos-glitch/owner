@@ -38,9 +38,9 @@ export default function InteracoesForm() {
   const [data, setData] = useState(hoje());
   const [observacao, setObservacao] = useState("");
 
-  // Ditado por voz para a observação: anexa a fala ao texto já existente.
+  // Ditado por voz para a observação: anexa a transcrição ao texto já existente.
   const baseObsRef = useRef("");
-  const { suportado: vozSuportada, ouvindo, erro: erroVoz, alternar: alternarVoz } = useDitado((t) => {
+  const { suportado: vozSuportada, ouvindo, transcrevendo, erro: erroVoz, alternar: alternarVoz } = useDitado((t) => {
     const base = baseObsRef.current;
     setObservacao(base ? `${base} ${t}` : t);
   });
@@ -142,12 +142,14 @@ export default function InteracoesForm() {
               <button
                 type="button"
                 onClick={ditarObservacao}
-                title={ouvindo ? "Parar de ouvir" : "Ditar observação"}
+                disabled={transcrevendo}
+                title={ouvindo ? "Parar e transcrever" : "Ditar observação"}
                 style={{ background: ouvindo ? "#C0392B" : "#EEF2F8", color: ouvindo ? "#fff" : "#1F3864",
                   border: "1px solid " + (ouvindo ? "#C0392B" : "#D6DEEA"), borderRadius: 8,
-                  padding: "3px 10px", fontSize: 13, cursor: "pointer", marginBottom: 4 }}
+                  padding: "3px 10px", fontSize: 13, cursor: transcrevendo ? "wait" : "pointer", marginBottom: 4,
+                  opacity: transcrevendo ? 0.6 : 1 }}
               >
-                {ouvindo ? "■ ouvindo…" : "🎤 ditar"}
+                {transcrevendo ? "transcrevendo…" : ouvindo ? "■ gravando…" : "🎤 ditar"}
               </button>
             )}
           </div>
