@@ -86,6 +86,12 @@ export default async function Dashboard() {
             📇 Interações
           </Link>
           <Link
+            href="/propostas"
+            style={{ color: "#2E75B6", padding: "8px 10px", fontSize: 13, textDecoration: "none" }}
+          >
+            📄 Propostas
+          </Link>
+          <Link
             href="/assistente"
             style={{ background: "#2E75B6", color: "#fff", padding: "8px 14px", borderRadius: 8,
               fontSize: 13, textDecoration: "none", fontWeight: 600 }}

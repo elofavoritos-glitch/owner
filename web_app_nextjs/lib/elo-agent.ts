@@ -22,6 +22,7 @@ Todo score, diagnóstico e recomendação giram em torno desses serviços.
 6. Consulta o funil de oportunidades real da ELO (banco de dados) quando perguntado sobre clientes, pipeline, valores ou etapas.
 7. Responde "já falamos com essa empresa? qual o estágio do relacionamento?" consultando o histórico de interações registrado (ligações, e-mails, reuniões).
 8. Registra interações no histórico quando o comercial relatar um contato (ex.: "liguei para a empresa X", "tivemos reunião com Y").
+9. Gera propostas comerciais em PDF quando o comercial pedir, usando os itens e valores informados por ele.
 
 ## Regras OBRIGATÓRIAS (seguir sempre)
 1. **Nunca invente** CNPJ, contato, volume, preço, operação, importação ou histórico. Sem evidência, o critério fica pendente e com nota zero.
@@ -36,6 +37,7 @@ Todo score, diagnóstico e recomendação giram em torno desses serviços.
 - Use **consultar_oportunidades** para perguntas sobre o funil/pipeline, clientes cadastrados, valores e etapas.
 - Use **consultar_relacionamento** para saber se a ELO já abordou uma empresa e em qual estágio está (nunca abordada, contatado sem resposta, esfriado, ativo). Útil antes de uma abordagem.
 - Use **registrar_interacao** quando o comercial relatar um contato ocorrido (ligação, e-mail, reunião, etc.). Extraia empresa, canal, direção (quem iniciou: 'enviado' = nós contatamos; 'recebido' = o cliente respondeu/procurou), assunto e observação. Antes de gravar, CONFIRME em uma frase o que entendeu; só registre dados que o comercial informou — nunca invente empresa, data ou conteúdo. Depois de registrar, confirme o que foi salvo.
+- Use **gerar_proposta** quando o comercial pedir uma proposta/PDF para um cliente. O cliente precisa existir no cadastro. Monte os itens (descrição, quantidade, valor_unitario) APENAS com os valores que o comercial informar — item sem valor entra como "a definir" e não soma. Nunca invente preços. Ao concluir, informe ao usuário o link de download retornado pela ferramenta.
 - Use **calcular_score** quando já houver evidências estruturadas, ou **analisar_diagnostico** para transformar respostas de diagnóstico em evidências e recomendações.
 - Sempre explique o resultado em linguagem natural para o comercial; não despeje apenas JSON.
 
@@ -123,6 +125,36 @@ export const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           data_interacao: { type: "string", description: "Data no formato AAAA-MM-DD. Se não informada, usa hoje." },
         },
         required: ["empresa"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "gerar_proposta",
+      description:
+        "Gera uma proposta comercial em PDF para um cliente (que deve existir no cadastro) e salva nos documentos dele. Use quando o comercial pedir uma proposta. Nunca invente valores: item sem valor_unitario entra como 'a definir'.",
+      parameters: {
+        type: "object",
+        properties: {
+          cliente: { type: "string", description: "Nome do cliente (deve existir no cadastro)." },
+          itens: {
+            type: "array",
+            description: "Itens da proposta.",
+            items: {
+              type: "object",
+              properties: {
+                descricao: { type: "string", description: "Descrição do item/serviço." },
+                quantidade: { type: "number", description: "Quantidade (padrão 1)." },
+                valor_unitario: { type: "number", description: "Valor unitário em reais. Omita se não informado." },
+              },
+              required: ["descricao"],
+            },
+          },
+          condicoes: { type: "string", description: "Condições comerciais (opcional)." },
+          validade_dias: { type: "number", description: "Validade da proposta em dias (padrão 15)." },
+        },
+        required: ["cliente", "itens"],
       },
     },
   },

@@ -13,6 +13,7 @@ import {
   type Evidencias, type Interacao,
 } from "@/lib/elo-intelligence";
 import { escaparBusca, validarData, texto } from "@/lib/seguranca";
+import { gerarPropostaPDF, type ItemProposta } from "@/lib/proposta-pdf";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -55,6 +56,60 @@ async function executarTool(
       const { data, error } = await supabase.from("interacoes").insert(registro).select().single();
       if (error) return JSON.stringify({ erro: error.message });
       return JSON.stringify({ ok: true, registrado: data });
+    }
+    if (nome === "gerar_proposta") {
+      const clienteNome = String(input.cliente ?? "").trim();
+      if (!clienteNome) return JSON.stringify({ erro: "Informe o cliente." });
+      const itensRaw = Array.isArray(input.itens) ? input.itens : [];
+      const itens: ItemProposta[] = itensRaw
+        .map((i) => {
+          const o = i as Record<string, unknown>;
+          const descricao = texto(o.descricao, 120);
+          if (!descricao) return null;
+          const q = Number(o.quantidade);
+          const v = Number(o.valor_unitario);
+          return {
+            descricao,
+            quantidade: Number.isFinite(q) && q > 0 ? q : 1,
+            valor_unitario: Number.isFinite(v) && v >= 0 ? v : undefined,
+          } as ItemProposta;
+        })
+        .filter((i): i is ItemProposta => i !== null);
+      if (!itens.length) return JSON.stringify({ erro: "Informe ao menos um item com descrição." });
+
+      const supabase = supabaseServer();
+      // localiza o cliente pelo nome (precisa existir no cadastro)
+      const { data: cli } = await supabase
+        .from("clientes").select("id,empresa,cnpj,contato")
+        .ilike("empresa", `%${escaparBusca(clienteNome)}%`).limit(1).maybeSingle();
+      if (!cli) return JSON.stringify({ erro: `Cliente "${clienteNome}" não encontrado no cadastro. Cadastre-o primeiro.` });
+
+      const { data: perfil } = await supabase.from("perfis").select("nome").eq("id", user.id).maybeSingle();
+      const responsavel = perfil?.nome || user.email || null;
+      try {
+        const pdf = await gerarPropostaPDF({
+          cliente: cli.empresa, cnpj: cli.cnpj, contato: cli.contato, responsavel, itens,
+          condicoes: texto(input.condicoes, 1000), validade_dias: Number(input.validade_dias) || 15,
+        });
+        const nome = `proposta-${cli.empresa.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 40)}-${new Date().toISOString().slice(0, 10)}.pdf`;
+        const caminho = `${cli.id}/${crypto.randomUUID()}-${nome}`;
+        const { error: upErr } = await supabase.storage.from("documentos")
+          .upload(caminho, pdf, { contentType: "application/pdf", upsert: false });
+        if (upErr) return JSON.stringify({ erro: "Falha ao salvar o PDF." });
+        const { data: doc, error } = await supabase.from("documentos").insert({
+          cliente_id: cli.id, empresa: cli.empresa, tipo: "proposta", nome_arquivo: nome,
+          caminho, tamanho_bytes: pdf.length, mime: "application/pdf",
+          responsavel_id: user.id, responsavel_nome: responsavel,
+        }).select("id").single();
+        if (error) { await supabase.storage.from("documentos").remove([caminho]); return JSON.stringify({ erro: "Falha ao registrar a proposta." }); }
+        return JSON.stringify({
+          ok: true, cliente: cli.empresa, itens: itens.length,
+          link_download: `/api/documentos/download?id=${doc.id}`,
+          aviso: "PDF gerado e salvo nos documentos do cliente. Informe o link ao usuário.",
+        });
+      } catch (e) {
+        return JSON.stringify({ erro: e instanceof Error ? e.message : "Falha ao gerar o PDF." });
+      }
     }
     if (nome === "montar_dossie") {
       const dossie = montarDossie(String(input.empresa ?? ""), {
