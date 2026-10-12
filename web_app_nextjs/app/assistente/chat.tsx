@@ -41,7 +41,10 @@ export default function Chat({ email }: { email: string }) {
         body: JSON.stringify({ messages: novas.filter((m) => m.role !== "assistant" || m !== novas[0]) }),
       });
       const d = await r.json();
-      const resposta = d.content || d.erro || "Não consegui responder.";
+      let resposta = d.content || d.erro || "Não consegui responder.";
+      if (d.erro && (d.status || d.detalhe)) {
+        resposta += `\n\n(diagnóstico — status ${d.status ?? "?"}: ${d.detalhe ?? ""})`;
+      }
       setMensagens((m) => [...m, { role: "assistant", content: resposta }]);
     } catch {
       setMensagens((m) => [...m, { role: "assistant", content: "Erro de conexão. Tente novamente." }]);

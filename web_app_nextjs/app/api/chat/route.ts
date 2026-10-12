@@ -16,7 +16,8 @@ import {
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const MODEL = "claude-3-5-sonnet-latest";
+// Modelo configurável por env var (ANTHROPIC_MODEL); default estável.
+const MODEL = process.env.ANTHROPIC_MODEL || "claude-3-5-sonnet-20241022";
 
 type ChatMsg = { role: "user" | "assistant"; content: string };
 
@@ -134,11 +135,23 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ content: "Não consegui concluir a análise. Tente reformular a pergunta." });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error("Erro no chat:", msg);
-    return NextResponse.json(
-      { erro: "Falha ao falar com o assistente. Verifique a ANTHROPIC_API_KEY.", detalhe: msg },
-      { status: 500 },
-    );
+    // Extrai o máximo de detalhe do erro da Anthropic para diagnóstico.
+    let status: number | undefined;
+    let detalhe = e instanceof Error ? e.message : String(e);
+    if (e instanceof Anthropic.APIError) {
+      status = e.status;
+      detalhe = JSON.stringify(e.error ?? e.message);
+    }
+
+    // Mensagem amigável conforme o status HTTP da Anthropic.
+    let erro = "Falha ao falar com o assistente.";
+    if (status === 401) erro = "ANTHROPIC_API_KEY inválida ou ausente.";
+    else if (status === 403) erro = "Sem permissão/sem créditos na conta Anthropic.";
+    else if (status === 404) erro = `Modelo '${MODEL}' indisponível para esta conta.`;
+    else if (status === 429) erro = "Limite de requisições/créditos atingido na Anthropic.";
+    else if (status && status >= 500) erro = "Instabilidade na API da Anthropic. Tente novamente.";
+
+    console.error("Erro no chat:", status, detalhe);
+    return NextResponse.json({ erro, status: status ?? null, detalhe }, { status: 500 });
   }
 }
