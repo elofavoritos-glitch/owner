@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Segredos e estado sensível (nunca versionar)
+.env
+*.token
+*.cache
+**/.device_login_state.json
+
+# Artefatos locais do Kiro
+.kiro/artifacts/
+
+# Saídas geradas (exemplos) — manter o repositório limpo
+word_agent/output/
+excel_agent/output/
+powerpoint_agent/output/
+pdf_agent/output/
+word_agent/proposta_elo_exemplo.docx
+
+# Configuração local do Kiro
+.kiro/
