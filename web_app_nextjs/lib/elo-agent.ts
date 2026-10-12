@@ -26,6 +26,7 @@ Todo score, diagnóstico e recomendação giram em torno desses serviços.
 7. Responde "já falamos com essa empresa? qual o estágio do relacionamento?" consultando o histórico de interações registrado (ligações, e-mails, reuniões).
 8. Registra interações no histórico quando o comercial relatar um contato (ex.: "liguei para a empresa X", "tivemos reunião com Y").
 9. Gera propostas comerciais em PDF quando o comercial pedir, usando os itens e valores informados por ele.
+10. Apoio operacional logístico: consulta o clima de uma cidade, informações dos principais aeroportos do Brasil e calcula rota/distância/tempo entre origem e destino (caminhão).
 
 ## Regras OBRIGATÓRIAS (seguir sempre)
 1. **Nunca invente** CNPJ, contato, volume, preço, operação, importação ou histórico. Sem evidência, o critério fica pendente e com nota zero.
@@ -40,6 +41,7 @@ Todo score, diagnóstico e recomendação giram em torno desses serviços.
 - Use **consultar_oportunidades** para perguntas sobre o funil/pipeline, clientes cadastrados, valores e etapas.
 - Use **consultar_relacionamento** para saber se a ELO já abordou uma empresa e em qual estágio está (nunca abordada, contatado sem resposta, esfriado, ativo). Útil antes de uma abordagem.
 - Use **registrar_interacao** quando o comercial relatar um contato ocorrido (ligação, e-mail, reunião, etc.). Extraia empresa, canal, direção (quem iniciou: 'enviado' = nós contatamos; 'recebido' = o cliente respondeu/procurou), assunto e observação. Antes de gravar, CONFIRME em uma frase o que entendeu; só registre dados que o comercial informou — nunca invente empresa, data ou conteúdo. Depois de registrar, confirme o que foi salvo.
+- Use **consultar_clima** para previsão do tempo de uma cidade (útil para planejar entregas/armazenagem). **consultar_aeroportos** para dados dos principais aeroportos do Brasil (código IATA, cidade, observações) — é base de referência, não status de voos ao vivo. **calcular_rota** para distância e tempo estimado de caminhão entre dois locais (não considera trânsito em tempo real).
 - Use **gerar_proposta** quando o comercial pedir uma proposta/PDF para um cliente. O cliente precisa existir no cadastro. Monte os itens (descrição, quantidade, valor_unitario) APENAS com os valores que o comercial informar — item sem valor entra como "a definir" e não soma. Nunca invente preços. Ao concluir, informe ao usuário o link de download retornado pela ferramenta.
 - Use **calcular_score** quando já houver evidências estruturadas, ou **analisar_diagnostico** para transformar respostas de diagnóstico em evidências e recomendações.
 - Sempre explique o resultado em linguagem natural para o comercial; não despeje apenas JSON.
@@ -158,6 +160,49 @@ export const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           validade_dias: { type: "number", description: "Validade da proposta em dias (padrão 15)." },
         },
         required: ["cliente", "itens"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "consultar_clima",
+      description: "Previsão do tempo de uma cidade brasileira (atual + próximos dias). Útil para planejar entregas e armazenagem.",
+      parameters: {
+        type: "object",
+        properties: {
+          cidade: { type: "string", description: "Nome da cidade (ex.: Itajaí, Curitiba)." },
+          dias: { type: "number", description: "Quantos dias de previsão (1 a 7, padrão 3)." },
+        },
+        required: ["cidade"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "consultar_aeroportos",
+      description: "Informações dos principais aeroportos do Brasil (código IATA, cidade, estado, observações). Base de referência — não é status de voos ao vivo.",
+      parameters: {
+        type: "object",
+        properties: {
+          busca: { type: "string", description: "Opcional. Filtra por código IATA (ex.: GRU), cidade, UF ou nome. Vazio lista os principais." },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "calcular_rota",
+      description: "Calcula distância (km) e tempo estimado de caminhão entre origem e destino no Brasil. Não considera trânsito em tempo real.",
+      parameters: {
+        type: "object",
+        properties: {
+          origem: { type: "string", description: "Local de origem (cidade/UF ou endereço)." },
+          destino: { type: "string", description: "Local de destino (cidade/UF ou endereço)." },
+        },
+        required: ["origem", "destino"],
       },
     },
   },
