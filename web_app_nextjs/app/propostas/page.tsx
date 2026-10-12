@@ -24,15 +24,15 @@ export default async function Propostas() {
   if (!user) redirect("/login");
 
   return (
-    <main style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
-      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+    <main className="elo-main" style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
+      <header className="elo-header">
+        <div className="elo-nav">
           <h1 style={{ color: "#1F3864", margin: 0, fontSize: 22 }}>Propostas — ELO</h1>
           <Link href="/" style={{ color: "#2E75B6", fontSize: 14, textDecoration: "none" }}>← Painel</Link>
           <Link href="/clientes" style={{ color: "#2E75B6", fontSize: 14, textDecoration: "none" }}>🏢 Clientes</Link>
           <Link href="/assistente" style={{ color: "#2E75B6", fontSize: 14, textDecoration: "none" }}>💬 Assistente</Link>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div className="elo-actions">
           <AjudaButton titulo="Como gerar propostas">
             <p>Monte uma proposta comercial em PDF com a identidade da ELO. O PDF é
             <strong> salvo automaticamente nos documentos do cliente</strong> e pode ser aberto/baixado.</p>
@@ -45,7 +45,7 @@ export default async function Propostas() {
             <p style={{ color: "#64748B", fontSize: 13 }}>Você também pode pedir uma proposta ao
             <strong> 💬 Assistente</strong> em conversa.</p>
           </AjudaButton>
-          <span style={{ color: "#607D8B", fontSize: 13 }}>{user.email}</span>
+          <span className="elo-email" style={{ color: "#607D8B", fontSize: 13 }}>{user.email}</span>
           <SairButton />
         </div>
       </header>

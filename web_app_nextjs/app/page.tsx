@@ -69,10 +69,10 @@ export default async function Dashboard() {
   ];
 
   return (
-    <main style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
-      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+    <main className="elo-main" style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
+      <header className="elo-header">
         <h1 style={{ color: "#1F3864", margin: 0 }}>Painel Comercial — ELO</h1>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div className="elo-actions">
           <Link
             href="/clientes"
             style={{ color: "#2E75B6", padding: "8px 10px", fontSize: 13, textDecoration: "none" }}
@@ -112,11 +112,11 @@ export default async function Dashboard() {
             <p>Use o <strong>📇 Interações</strong> para registrar contatos e o
             <strong> 💬 Assistente</strong> para consultar e analisar clientes em conversa (inclusive por voz).</p>
           </AjudaButton>
-          <span style={{ color: "#607D8B", fontSize: 13 }}>{user.email}</span>
+          <span className="elo-email" style={{ color: "#607D8B", fontSize: 13 }}>{user.email}</span>
           <SairButton />
         </div>
       </header>
-      <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 16, margin: "16px 0" }}>
+      <section className="elo-kpis">
         {kpis.map((k) => (
           <div key={k.l} style={{ background: "#fff", border: "1px solid #E3E8F0", borderRadius: 12, padding: 16 }}>
             <div style={{ fontSize: 26, fontWeight: 800, color: k.cor || "#1F3864" }}>{k.v}</div>

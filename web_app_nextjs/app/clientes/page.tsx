@@ -24,15 +24,15 @@ export default async function Clientes() {
   if (!user) redirect("/login");
 
   return (
-    <main style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
-      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+    <main className="elo-main" style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
+      <header className="elo-header">
+        <div className="elo-nav">
           <h1 style={{ color: "#1F3864", margin: 0, fontSize: 22 }}>Clientes — ELO</h1>
           <Link href="/" style={{ color: "#2E75B6", fontSize: 14, textDecoration: "none" }}>← Painel</Link>
           <Link href="/interacoes" style={{ color: "#2E75B6", fontSize: 14, textDecoration: "none" }}>📇 Interações</Link>
           <Link href="/assistente" style={{ color: "#2E75B6", fontSize: 14, textDecoration: "none" }}>💬 Assistente</Link>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div className="elo-actions">
           <AjudaButton titulo="Cadastro de clientes">
             <p>Centralize aqui os dados dos clientes da ELO. Esse cadastro é a base para
             anexar documentos e para enriquecer as análises do assistente.</p>
@@ -43,7 +43,7 @@ export default async function Clientes() {
             <p style={{ color: "#64748B", fontSize: 13 }}>O cadastro é compartilhado pelo time; o responsável
             registrado é quem criou.</p>
           </AjudaButton>
-          <span style={{ color: "#607D8B", fontSize: 13 }}>{user.email}</span>
+          <span className="elo-email" style={{ color: "#607D8B", fontSize: 13 }}>{user.email}</span>
           <SairButton />
         </div>
       </header>

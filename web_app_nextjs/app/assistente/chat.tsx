@@ -56,7 +56,7 @@ export default function Chat({ email }: { email: string }) {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 130px)", maxWidth: 820, margin: "0 auto" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "calc(100dvh - 160px)", minHeight: 360, maxWidth: 820, margin: "0 auto" }}>
       <div style={{ flex: 1, overflowY: "auto", padding: "8px 4px", display: "flex", flexDirection: "column", gap: 12 }}>
         {mensagens.map((m, i) => (
           <div
