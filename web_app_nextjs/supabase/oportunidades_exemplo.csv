@@ -1,0 +1,13 @@
+cliente_nome,responsavel_nome,servico,etapa,status,valor_potencial,probabilidade,ultimo_contato,proxima_acao,data_proxima_acao,previsao_fechamento,motivo_perda,observacoes
+Transportadora Horizonte,Ana Souza,Gestão de frota,Negociação,Ativa,185000,0.6,2026-10-02,Enviar proposta revisada,2026-10-15,2026-11-10,,Cliente pediu desconto de 8%
+Supermercados BomPreço,Carlos Lima,Roteirização de entregas,Cotação,Ativa,92000,0.45,2026-09-28,Agendar reunião técnica,2026-10-14,2026-11-20,,Avaliando contra concorrente
+Indústria MetalForte,Ana Souza,Logística integrada,Diagnóstico,Ativa,240000,0.3,2026-10-05,Levantar volumetria,2026-10-18,2026-12-05,,Projeto grande potencial
+Farmácias VidaPlena,Bruno Alves,Última milha,Qualificação,Ativa,56000,0.2,2026-09-20,Qualificar necessidade,2026-10-13,2026-12-15,,Lead veio de indicação
+Construtora Pilar,Carlos Lima,Transporte dedicado,Prospecção,Ativa,130000,0.1,2026-10-01,Primeiro contato comercial,2026-10-16,2027-01-10,,Prospecção fria
+E-commerce RápidoJá,Ana Souza,Fulfillment,Negociação,Ativa,310000,0.7,2026-10-07,Fechar escopo final,2026-10-12,2026-10-30,,Alta urgência do cliente
+Distribuidora Central,Bruno Alves,Armazenagem,Ganho,Ganha,145000,1.0,2026-09-15,,,,2026-09-25,Contrato assinado 12 meses
+Atacado Norte,Carlos Lima,Roteirização de entregas,Perdido,Perdida,78000,0.0,2026-08-30,,,,,Perdeu por preço — concorrente 15% menor
+Varejo ModaViva,Ana Souza,Última milha,Cotação,Ativa,64000,0.5,2026-10-06,Enviar cotação detalhada,2026-10-17,2026-11-28,,Cliente recorrente
+AgroInsumos Vale Verde,Bruno Alves,Logística integrada,Diagnóstico,Ativa,198000,0.35,2026-10-03,Mapear safra e sazonalidade,2026-10-20,2026-12-20,,Sazonalidade forte no 1o trimestre
+Clínica SaúdeTotal,Carlos Lima,Transporte refrigerado,Qualificação,Em espera,42000,0.25,2026-09-18,Retomar após orçamento interno,2026-10-25,2027-01-20,,Cliente aguardando budget
+Hotelaria MarAzul,Ana Souza,Transporte dedicado,Prospecção,Ativa,88000,0.15,2026-10-04,Enviar apresentação institucional,2026-10-19,2027-02-01,,Expansão prevista para 2027

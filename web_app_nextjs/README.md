@@ -26,12 +26,26 @@ npm run dev                  # http://localhost:3000
 2. Rode `supabase/schema.sql` no SQL Editor (cria tabelas + RLS).
 3. Copie `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` para o `.env.local`.
 
-## Login Microsoft 365
+## Login
 
-1. No Supabase: Authentication → Providers → **Azure** → habilitar.
-2. Informe `MS_TENANT_ID`, `MS_CLIENT_ID` e o client secret (reaproveita o app
-   registration do Entra já criado para o Outlook, ou crie um dedicado ao web app).
-3. Em redirect URIs do Entra, adicione a URL de callback do Supabase.
+A tela `/login` oferece dois métodos:
+
+- **E-mail / senha** — via Supabase Auth. Funciona imediatamente; crie usuários
+  no painel (Authentication → Users) ou por SQL seed.
+- **Microsoft 365 (Azure SSO)** — opcional. Habilite quando tiver acesso ao Entra:
+  1. Supabase: Authentication → Providers → **Azure** → habilitar.
+  2. Informe `MS_TENANT_ID`, `MS_CLIENT_ID` e o client secret (reaproveita o app
+     registration do Entra já criado para o Outlook, ou crie um dedicado ao web app).
+  3. Em redirect URIs do Entra, adicione a URL de callback do Supabase.
+  Enquanto não configurado, o botão Microsoft exibe aviso de indisponível.
+
+## Importar oportunidades
+
+```bash
+pip install 'psycopg[binary]'
+export SUPABASE_DB_URL="postgresql://postgres.<ref>:<senha>@<host>:5432/postgres?sslmode=require"
+python supabase/importar_oportunidades.py supabase/oportunidades_exemplo.csv
+```
 
 ## Permissões (RLS)
 
@@ -47,12 +61,16 @@ web_app_nextjs/
 │   ├── layout.tsx          # layout raiz
 │   ├── page.tsx            # dashboard (server component, lê do Supabase)
 │   ├── charts.tsx          # gráficos Recharts (client)
-│   ├── login/page.tsx      # login Microsoft 365
+│   ├── login/page.tsx      # login (e-mail/senha + Microsoft 365)
 │   └── auth/callback/route.ts
 ├── lib/
-│   ├── supabase.ts         # clientes browser/server
+│   ├── supabase-browser.ts # client Supabase (browser / Client Components)
+│   ├── supabase-server.ts  # client Supabase (Server Components / rotas)
 │   └── metrics.ts          # cálculo de indicadores (espelha os agentes Python)
-├── supabase/schema.sql     # tabelas + RLS
+├── supabase/
+│   ├── schema.sql                  # tabelas + RLS
+│   ├── importar_oportunidades.py   # importador de CSV -> Supabase
+│   └── oportunidades_exemplo.csv   # dados de exemplo
 ├── package.json
 ├── tsconfig.json
 └── .env.example
