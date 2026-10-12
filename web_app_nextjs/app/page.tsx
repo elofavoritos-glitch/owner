@@ -9,7 +9,31 @@ import SairButton from "./sair-button";
 // A página depende de cookies/sessão: precisa ser renderizada dinamicamente.
 export const dynamic = "force-dynamic";
 
+function ConfigFaltando() {
+  return (
+    <main style={{ maxWidth: 640, margin: "80px auto", padding: 24, fontFamily: "Segoe UI, system-ui" }}>
+      <h1 style={{ color: "#C0392B" }}>Configuração incompleta</h1>
+      <p style={{ color: "#334155" }}>
+        As variáveis de ambiente do Supabase não estão definidas neste deploy.
+        Configure <code>NEXT_PUBLIC_SUPABASE_URL</code> e{" "}
+        <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> em{" "}
+        <strong>Vercel → Settings → Environment Variables</strong> (ambiente
+        Production) e faça um novo deploy.
+      </p>
+      <p style={{ color: "#64748B", fontSize: 13 }}>
+        Diagnóstico detalhado em <code>/api/health</code>.
+      </p>
+    </main>
+  );
+}
+
 export default async function Dashboard() {
+  // Sem env vars, o client do Supabase não pode ser criado: mostra aviso claro
+  // em vez de derrubar a renderização com um erro críptico.
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return <ConfigFaltando />;
+  }
+
   const supabase = supabaseServer();
 
   // getUser() não deve derrubar a página se o cookie estiver ausente/inválido.

@@ -9,6 +9,11 @@ const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
 
+  // Sem env vars não há como renovar a sessão; não derruba a requisição.
+  if (!SUPABASE_URL || !ANON) {
+    return response;
+  }
+
   const supabase = createServerClient(SUPABASE_URL, ANON, {
     cookies: {
       getAll() {
