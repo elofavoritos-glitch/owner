@@ -9,7 +9,8 @@ import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
 import { SYSTEM_PROMPT, TOOLS } from "@/lib/elo-agent";
 import {
-  montarDossie, analisarDiagnostico, calcularScore, type Evidencias,
+  montarDossie, analisarDiagnostico, calcularScore, classificarRelacionamento,
+  type Evidencias, type Interacao,
 } from "@/lib/elo-intelligence";
 
 export const dynamic = "force-dynamic";
@@ -37,6 +38,19 @@ async function executarTool(nome: string, input: Record<string, unknown>): Promi
     }
     if (nome === "calcular_score") {
       return JSON.stringify(calcularScore(String(input.empresa ?? ""), (input.evidencias as Evidencias) ?? {}));
+    }
+    if (nome === "consultar_relacionamento") {
+      const empresa = String(input.empresa ?? "").trim();
+      if (!empresa) return JSON.stringify({ erro: "Informe a empresa." });
+      const supabase = supabaseServer();
+      const { data, error } = await supabase
+        .from("interacoes")
+        .select("canal,direcao,assunto,data_interacao,responsavel_nome")
+        .ilike("empresa", `%${empresa}%`)
+        .order("data_interacao", { ascending: false })
+        .limit(200);
+      if (error) return JSON.stringify({ erro: error.message });
+      return JSON.stringify(classificarRelacionamento(empresa, (data ?? []) as Interacao[]));
     }
     if (nome === "consultar_oportunidades") {
       const supabase = supabaseServer();

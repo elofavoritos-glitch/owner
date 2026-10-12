@@ -299,3 +299,65 @@ export function montarDossie(
     observacao: "Dados sem fonte confirmada devem ser validados antes do uso comercial.",
   };
 }
+
+// ===================== Relacionamento (relacionamento.py) =====================
+// Classifica o estágio do relacionamento a partir do histórico de interações.
+
+export type Interacao = {
+  canal: string;
+  direcao: string; // 'enviado' | 'recebido' (recebido = iniciativa/resposta do cliente)
+  assunto?: string | null;
+  data_interacao: string; // AAAA-MM-DD
+  responsavel_nome?: string | null;
+};
+
+export type Relacionamento = {
+  empresa: string;
+  estagio: string;
+  total_interacoes: number;
+  ultimo_contato: string | null;
+  dias_sem_contato: number | null;
+  houve_resposta_cliente: boolean;
+  responsaveis: string[];
+  assuntos_recentes: string[];
+};
+
+export function classificarRelacionamento(
+  empresa: string,
+  interacoes: Interacao[],
+): Relacionamento {
+  const total = interacoes.length;
+  const datas = interacoes
+    .map((i) => new Date(i.data_interacao))
+    .filter((d) => !Number.isNaN(d.getTime()));
+  const ultimo = datas.length ? new Date(Math.max(...datas.map((d) => d.getTime()))) : null;
+  const dias = ultimo ? Math.floor((Date.now() - ultimo.getTime()) / 86_400_000) : null;
+  const houveResposta = interacoes.some((i) => i.direcao === "recebido");
+
+  const responsaveis = Array.from(
+    new Set(interacoes.map((i) => (i.responsavel_nome ?? "").trim()).filter(Boolean)),
+  ).sort();
+  const assuntos: string[] = [];
+  for (const i of interacoes) {
+    const a = (i.assunto ?? "").trim();
+    if (a && !assuntos.includes(a)) assuntos.push(a);
+  }
+
+  // Mesma classificação do relacionamento.py.
+  let estagio: string;
+  if (total === 0) estagio = "Empresa nunca abordada por esta conta";
+  else if (!houveResposta) estagio = "Prospect contatado sem resposta";
+  else if (dias !== null && dias > 120) estagio = "Relacionamento esfriado (reativar)";
+  else estagio = "Relacionamento ativo";
+
+  return {
+    empresa,
+    estagio,
+    total_interacoes: total,
+    ultimo_contato: ultimo ? ultimo.toISOString().slice(0, 10) : null,
+    dias_sem_contato: dias,
+    houve_resposta_cliente: houveResposta,
+    responsaveis,
+    assuntos_recentes: assuntos.slice(0, 5),
+  };
+}
