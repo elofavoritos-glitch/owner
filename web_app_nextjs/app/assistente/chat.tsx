@@ -24,11 +24,12 @@ export default function Chat({ email }: { email: string }) {
   ]);
   const [input, setInput] = useState("");
   const [carregando, setCarregando] = useState(false);
+  const [ouvindoIdx, setOuvindoIdx] = useState<number | null>(null); // qual mensagem está tocando/gerando
   const fim = useRef<HTMLDivElement>(null);
   const { suportado, ouvindo, transcrevendo, erro: erroVoz, alternar } = useDitado(
     (t) => setInput((prev) => (prev ? `${prev} ${t}` : t)),
   );
-  const { suportado: falaSuportada, ligado: vozLigada, falando, alternarLigado, falar, parar: pararFala } = useFala();
+  const { suportado: falaSuportada, ligado: vozLigada, falando, preparando, alternarLigado, falar, ouvir, parar: pararFala } = useFala();
 
   useEffect(() => {
     fim.current?.scrollIntoView({ behavior: "smooth" });
@@ -82,18 +83,28 @@ export default function Chat({ email }: { email: string }) {
             }}
           >
             {m.content}
-            {m.role === "assistant" && i > 0 && falaSuportada && (
-              <button
-                type="button"
-                onClick={() => (falando ? pararFala() : falar(m.content))}
-                title="Ouvir"
-                style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 8,
-                  background: "rgba(46,117,182,.1)", color: "var(--elo-azul)", border: "none",
-                  borderRadius: "var(--r-full)", padding: "4px 11px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
-              >
-                <IconSom size={13} /> Ouvir
-              </button>
-            )}
+            {m.role === "assistant" && i > 0 && falaSuportada && (() => {
+              const ativo = ouvindoIdx === i;
+              const gerando = ativo && preparando;
+              const tocando = ativo && falando;
+              return (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (gerando || tocando) { pararFala(); setOuvindoIdx(null); }
+                    else { setOuvindoIdx(i); ouvir(m.content); }
+                  }}
+                  title={tocando ? "Parar" : "Ouvir"}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 8,
+                    background: ativo ? "var(--grad-azul-suave)" : "rgba(46,117,182,.1)",
+                    color: ativo ? "#fff" : "var(--elo-azul)", border: "none",
+                    borderRadius: "var(--r-full)", padding: "4px 11px", fontSize: 12, fontWeight: 600,
+                    cursor: "pointer", transition: "background .15s" }}
+                >
+                  {gerando ? <>⏳ Gerando…</> : tocando ? <><IconStop size={12} /> Parar</> : <><IconSom size={13} /> Ouvir</>}
+                </button>
+              );
+            })()}
           </div>
         ))}
         {carregando && (
