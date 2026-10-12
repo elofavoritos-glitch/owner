@@ -1,6 +1,7 @@
 "use client";
 import { useRef, useState, useEffect } from "react";
 import { useDitado } from "../use-ditado";
+import { useFala } from "../use-fala";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -26,6 +27,7 @@ export default function Chat({ email }: { email: string }) {
   const { suportado, ouvindo, transcrevendo, erro: erroVoz, alternar } = useDitado(
     (t) => setInput((prev) => (prev ? `${prev} ${t}` : t)),
   );
+  const { suportado: falaSuportada, ligado: vozLigada, falando, alternarLigado, falar, parar: pararFala } = useFala();
 
   useEffect(() => {
     fim.current?.scrollIntoView({ behavior: "smooth" });
@@ -50,6 +52,7 @@ export default function Chat({ email }: { email: string }) {
         resposta += `\n\n(diagnóstico — status ${d.status ?? "?"}: ${d.detalhe ?? ""})`;
       }
       setMensagens((m) => [...m, { role: "assistant", content: resposta }]);
+      if (d.content) falar(d.content); // lê em voz alta se a voz estiver ligada
     } catch {
       setMensagens((m) => [...m, { role: "assistant", content: "Erro de conexão. Tente novamente." }]);
     } finally {
@@ -99,6 +102,21 @@ export default function Chat({ email }: { email: string }) {
               {s}
             </button>
           ))}
+        </div>
+      )}
+
+      {falaSuportada && (
+        <div style={{ display: "flex", justifyContent: "flex-end", padding: "4px 4px 0" }}>
+          <button
+            type="button"
+            onClick={() => { if (vozLigada && falando) pararFala(); alternarLigado(); }}
+            title={vozLigada ? "Desligar voz do assistente" : "Ligar voz do assistente"}
+            style={{ background: vozLigada ? "#2E75B6" : "#EEF2F8", color: vozLigada ? "#fff" : "#607D8B",
+              border: "1px solid " + (vozLigada ? "#2E75B6" : "#D6DEEA"), borderRadius: 20,
+              padding: "4px 12px", fontSize: 12, cursor: "pointer" }}
+          >
+            {vozLigada ? "🔊 Voz ligada" : "🔇 Voz desligada"}
+          </button>
         </div>
       )}
 
