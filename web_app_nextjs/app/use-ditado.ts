@@ -1,28 +1,32 @@
 "use client";
-// Hook de ditado por voz usando a Web Speech API do navegador (grátis, sem
-// servidor). Transcreve fala em PT-BR para texto. Suporte varia por navegador
-// (ótimo no Chrome/Edge/Android; limitado no Safari/iOS).
+// Hook de ditado por voz (Web Speech API). Transcreve fala PT-BR em texto.
+// Funciona de forma CONTÍNUA: o usuário toca uma vez, fala com pausas à vontade,
+// e toca de novo para parar. Lida com os reinícios internos que o navegador faz.
+//
+// Suporte: ótimo no Chrome/Edge (desktop e Android). Safari/iOS é limitado.
 import { useCallback, useEffect, useRef, useState } from "react";
 
-type SpeechRecognitionResultLike = { 0: { transcript: string }; isFinal: boolean };
-type SpeechRecognitionEventLike = { results: ArrayLike<SpeechRecognitionResultLike>; resultIndex: number };
-interface SpeechRecognitionLike {
+type ResultLike = { 0: { transcript: string }; isFinal: boolean };
+type EventLike = { results: ArrayLike<ResultLike>; resultIndex: number };
+interface RecognitionLike {
   lang: string;
   continuous: boolean;
   interimResults: boolean;
+  maxAlternatives: number;
   start: () => void;
   stop: () => void;
   abort: () => void;
-  onresult: ((e: SpeechRecognitionEventLike) => void) | null;
+  onresult: ((e: EventLike) => void) | null;
   onerror: ((e: { error: string }) => void) | null;
   onend: (() => void) | null;
+  onstart: (() => void) | null;
 }
 
-function getRecognitionCtor(): (new () => SpeechRecognitionLike) | null {
+function getCtor(): (new () => RecognitionLike) | null {
   if (typeof window === "undefined") return null;
   const w = window as unknown as {
-    SpeechRecognition?: new () => SpeechRecognitionLike;
-    webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+    SpeechRecognition?: new () => RecognitionLike;
+    webkitSpeechRecognition?: new () => RecognitionLike;
   };
   return w.SpeechRecognition || w.webkitSpeechRecognition || null;
 }
@@ -32,94 +36,117 @@ export function useDitado(onTexto: (texto: string) => void) {
   const [ouvindo, setOuvindo] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  const recRef = useRef<SpeechRecognitionLike | null>(null);
-  const callbackRef = useRef(onTexto);
-  callbackRef.current = onTexto;
+  const recRef = useRef<RecognitionLike | null>(null);
+  const cbRef = useRef(onTexto);
+  cbRef.current = onTexto;
 
-  // Controle via ref (não só state) para não cair em closure velha.
-  const ativoRef = useRef(false);          // o usuário quer continuar ouvindo?
-  const finalRef = useRef("");             // texto já finalizado acumulado
+  // Flags de controle (ref para não cair em closure velha).
+  const querOuvirRef = useRef(false); // usuário mandou ouvir e ainda não parou
+  const finalRef = useRef("");        // transcrição final acumulada entre sessões
+  const reiniciarTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    setSuportado(Boolean(getRecognitionCtor()));
+    setSuportado(Boolean(getCtor()));
     return () => {
-      ativoRef.current = false;
-      recRef.current?.abort();
+      querOuvirRef.current = false;
+      if (reiniciarTimer.current) clearTimeout(reiniciarTimer.current);
+      try { recRef.current?.abort(); } catch { /* ignore */ }
     };
   }, []);
 
-  const parar = useCallback(() => {
-    ativoRef.current = false;
-    recRef.current?.stop();
-    setOuvindo(false);
-  }, []);
-
-  const iniciar = useCallback(() => {
-    const Ctor = getRecognitionCtor();
-    if (!Ctor) {
-      setErro("Seu navegador não suporta ditado por voz. Use o Chrome ou Edge (no computador ou Android).");
-      return;
-    }
-    setErro(null);
-    finalRef.current = "";
-    ativoRef.current = true;
-
+  // Cria uma nova instância configurada. Cada sessão usa uma instância nova —
+  // reiniciar o MESMO objeto costuma falhar nos navegadores.
+  const criar = useCallback((): RecognitionLike | null => {
+    const Ctor = getCtor();
+    if (!Ctor) return null;
     const rec = new Ctor();
     rec.lang = "pt-BR";
-    rec.continuous = true;      // não encerra na primeira pausa
+    rec.continuous = true;
     rec.interimResults = true;
+    rec.maxAlternatives = 1;
+
+    rec.onstart = () => setOuvindo(true);
 
     rec.onresult = (e) => {
       let interino = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const r = e.results[i];
-        if (r.isFinal) finalRef.current += r[0].transcript + " ";
-        else interino += r[0].transcript;
+        const t = r[0]?.transcript ?? "";
+        if (r.isFinal) finalRef.current += (finalRef.current && !finalRef.current.endsWith(" ") ? " " : "") + t.trim() + " ";
+        else interino += t;
       }
-      callbackRef.current((finalRef.current + interino).trim());
+      const texto = (finalRef.current + interino).replace(/\s+/g, " ").trim();
+      cbRef.current(texto);
     };
 
     rec.onerror = (ev) => {
       if (ev.error === "not-allowed" || ev.error === "service-not-allowed") {
-        setErro("Permissão de microfone negada. Autorize o microfone no navegador.");
-        ativoRef.current = false;
+        setErro("Permissão de microfone negada. Autorize o microfone nas configurações do navegador.");
+        querOuvirRef.current = false;
         setOuvindo(false);
-      } else if (ev.error === "no-speech") {
-        // silêncio: o onend vai reiniciar automaticamente, não é erro fatal.
-      } else if (ev.error === "aborted") {
-        // parada intencional, ignora.
+      } else if (ev.error === "no-speech" || ev.error === "aborted" || ev.error === "network") {
+        // não fatais: no-speech/aborted são normais; o onend decide reiniciar.
       } else {
-        setErro("Erro no reconhecimento de voz. Tente novamente.");
+        setErro("Erro no reconhecimento de voz: " + ev.error);
       }
     };
 
-    // Quando o motor encerra sozinho (pausa longa), reinicia se o usuário ainda
-    // quer ouvir — é isso que faz o ditado continuar em vez de parar na 1ª vez.
+    // O navegador encerra a sessão periodicamente (ou após silêncio). Se o
+    // usuário ainda quer ouvir, criamos uma NOVA instância após um pequeno
+    // atraso (reiniciar imediatamente, ou o mesmo objeto, costuma falhar).
     rec.onend = () => {
-      if (ativoRef.current) {
+      if (!querOuvirRef.current) {
+        setOuvindo(false);
+        return;
+      }
+      reiniciarTimer.current = setTimeout(() => {
+        if (!querOuvirRef.current) return;
+        const nova = criar();
+        if (!nova) { querOuvirRef.current = false; setOuvindo(false); return; }
+        recRef.current = nova;
         try {
-          rec.start();
+          nova.start();
         } catch {
-          ativoRef.current = false;
+          querOuvirRef.current = false;
           setOuvindo(false);
         }
-      } else {
-        setOuvindo(false);
-      }
+      }, 250);
     };
 
+    return rec;
+  }, []);
+
+  const parar = useCallback(() => {
+    querOuvirRef.current = false;
+    if (reiniciarTimer.current) clearTimeout(reiniciarTimer.current);
+    try { recRef.current?.stop(); } catch { /* ignore */ }
+    setOuvindo(false);
+  }, []);
+
+  const iniciar = useCallback(() => {
+    if (querOuvirRef.current) return; // já ouvindo
+    const rec = criar();
+    if (!rec) {
+      setErro("Seu navegador não suporta ditado por voz. Use o Chrome ou Edge (desktop ou Android).");
+      return;
+    }
+    setErro(null);
+    finalRef.current = "";
+    querOuvirRef.current = true;
     recRef.current = rec;
     try {
       rec.start();
-      setOuvindo(true);
     } catch {
-      // start() pode lançar se já estiver rodando; garante estado coerente.
-      setOuvindo(true);
+      // Se já havia uma sessão presa, aborta e tenta de novo.
+      try { rec.abort(); } catch { /* ignore */ }
+      querOuvirRef.current = false;
+      setOuvindo(false);
+      setErro("Não foi possível iniciar o microfone. Tente novamente.");
     }
-  }, []);
+  }, [criar]);
 
   const alternar = useCallback(() => {
-    if (ativoRef.current) parar();
+    if (querOuvirRef.current) parar();
     else iniciar();
   }, [parar, iniciar]);
 
