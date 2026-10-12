@@ -23,17 +23,37 @@ export function useFala() {
     };
   }, []);
 
+  const destravadoRef = useRef(false);
+
+  // iOS/Safari só permite áudio iniciado por gesto do usuário. Ao tocar no botão,
+  // disparamos um utterance mínimo DENTRO do gesto para "destravar" o
+  // speechSynthesis pelo resto da sessão.
+  const destravar = useCallback(() => {
+    const synth = synthRef.current;
+    if (!synth || destravadoRef.current) return;
+    try {
+      synth.cancel();
+      const u = new SpeechSynthesisUtterance(" ");
+      u.volume = 0; // silencioso, só para liberar o canal de áudio no iOS
+      u.lang = "pt-BR";
+      synth.speak(u);
+      destravadoRef.current = true;
+    } catch { /* ignore */ }
+  }, []);
+
   const alternarLigado = useCallback(() => {
     setLigado((v) => {
       const novo = !v;
       try { localStorage.setItem("elo-voz", novo ? "1" : "0"); } catch { /* ignore */ }
-      if (!novo) {
+      if (novo) {
+        destravar(); // libera o áudio no iOS neste toque
+      } else {
         try { synthRef.current?.cancel(); } catch { /* ignore */ }
         setFalando(false);
       }
       return novo;
     });
-  }, []);
+  }, [destravar]);
 
   const parar = useCallback(() => {
     try { synthRef.current?.cancel(); } catch { /* ignore */ }
@@ -51,13 +71,15 @@ export function useFala() {
     if (!limpo) return;
     try {
       synth.cancel(); // interrompe fala anterior
+      // iOS às vezes deixa o synth "pausado" — garante retomada.
+      if (synth.paused) synth.resume();
       const u = new SpeechSynthesisUtterance(limpo);
       u.lang = "pt-BR";
       u.rate = 1.05;
       u.onstart = () => setFalando(true);
       u.onend = () => setFalando(false);
       u.onerror = () => setFalando(false);
-      // prefere uma voz pt-BR, se houver
+      // prefere uma voz pt-BR, se houver (no iOS as vozes podem demorar a carregar)
       const vozes = synth.getVoices();
       const ptbr = vozes.find((v) => v.lang?.toLowerCase().startsWith("pt"));
       if (ptbr) u.voice = ptbr;
