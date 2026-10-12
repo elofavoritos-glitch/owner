@@ -4,7 +4,6 @@
 // (ótimo no Chrome/Edge/Android; limitado no Safari/iOS).
 import { useCallback, useEffect, useRef, useState } from "react";
 
-// Tipos mínimos da Web Speech API (não há tipos oficiais no DOM lib).
 type SpeechRecognitionResultLike = { 0: { transcript: string }; isFinal: boolean };
 type SpeechRecognitionEventLike = { results: ArrayLike<SpeechRecognitionResultLike>; resultIndex: number };
 interface SpeechRecognitionLike {
@@ -32,65 +31,97 @@ export function useDitado(onTexto: (texto: string) => void) {
   const [suportado, setSuportado] = useState(false);
   const [ouvindo, setOuvindo] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+
   const recRef = useRef<SpeechRecognitionLike | null>(null);
   const callbackRef = useRef(onTexto);
   callbackRef.current = onTexto;
 
+  // Controle via ref (não só state) para não cair em closure velha.
+  const ativoRef = useRef(false);          // o usuário quer continuar ouvindo?
+  const finalRef = useRef("");             // texto já finalizado acumulado
+
   useEffect(() => {
     setSuportado(Boolean(getRecognitionCtor()));
-    // Cleanup: se o componente desmontar durante a captura, aborta o microfone.
     return () => {
+      ativoRef.current = false;
       recRef.current?.abort();
     };
   }, []);
 
   const parar = useCallback(() => {
+    ativoRef.current = false;
     recRef.current?.stop();
     setOuvindo(false);
   }, []);
 
-  const alternar = useCallback(() => {
-    setErro(null);
-    if (ouvindo) {
-      parar();
-      return;
-    }
+  const iniciar = useCallback(() => {
     const Ctor = getRecognitionCtor();
     if (!Ctor) {
-      setErro("Seu navegador não suporta ditado por voz. Use o Chrome ou Edge.");
+      setErro("Seu navegador não suporta ditado por voz. Use o Chrome ou Edge (no computador ou Android).");
       return;
     }
+    setErro(null);
+    finalRef.current = "";
+    ativoRef.current = true;
+
     const rec = new Ctor();
     rec.lang = "pt-BR";
-    rec.continuous = false;
+    rec.continuous = true;      // não encerra na primeira pausa
     rec.interimResults = true;
 
-    let finalAcumulado = "";
     rec.onresult = (e) => {
       let interino = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const r = e.results[i];
-        if (r.isFinal) finalAcumulado += r[0].transcript;
+        if (r.isFinal) finalRef.current += r[0].transcript + " ";
         else interino += r[0].transcript;
       }
-      callbackRef.current((finalAcumulado + interino).trim());
+      callbackRef.current((finalRef.current + interino).trim());
     };
+
     rec.onerror = (ev) => {
-      if (ev.error === "no-speech") setErro("Não ouvi nada. Tente de novo.");
-      else if (ev.error === "not-allowed") setErro("Permissão de microfone negada.");
-      else setErro("Erro no reconhecimento de voz.");
-      setOuvindo(false);
+      if (ev.error === "not-allowed" || ev.error === "service-not-allowed") {
+        setErro("Permissão de microfone negada. Autorize o microfone no navegador.");
+        ativoRef.current = false;
+        setOuvindo(false);
+      } else if (ev.error === "no-speech") {
+        // silêncio: o onend vai reiniciar automaticamente, não é erro fatal.
+      } else if (ev.error === "aborted") {
+        // parada intencional, ignora.
+      } else {
+        setErro("Erro no reconhecimento de voz. Tente novamente.");
+      }
     };
-    rec.onend = () => setOuvindo(false);
+
+    // Quando o motor encerra sozinho (pausa longa), reinicia se o usuário ainda
+    // quer ouvir — é isso que faz o ditado continuar em vez de parar na 1ª vez.
+    rec.onend = () => {
+      if (ativoRef.current) {
+        try {
+          rec.start();
+        } catch {
+          ativoRef.current = false;
+          setOuvindo(false);
+        }
+      } else {
+        setOuvindo(false);
+      }
+    };
 
     recRef.current = rec;
     try {
       rec.start();
       setOuvindo(true);
     } catch {
-      setErro("Não foi possível iniciar o microfone.");
+      // start() pode lançar se já estiver rodando; garante estado coerente.
+      setOuvindo(true);
     }
-  }, [ouvindo, parar]);
+  }, []);
+
+  const alternar = useCallback(() => {
+    if (ativoRef.current) parar();
+    else iniciar();
+  }, [parar, iniciar]);
 
   return { suportado, ouvindo, erro, alternar, parar };
 }
