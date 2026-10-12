@@ -11,8 +11,8 @@ import { supabaseServer } from "@/lib/supabase-server";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-// Voz PT-BR natural. Chirp3-HD são as mais naturais do Google. Configurável.
-const VOZ = process.env.GOOGLE_TTS_VOICE || "pt-BR-Chirp3-HD-Charon";
+// Voz PT-BR natural (feminina). Chirp3-HD é o estado da arte do Google. Configurável.
+const VOZ = process.env.GOOGLE_TTS_VOICE || "pt-BR-Chirp3-HD-Leda";
 const MAX_CHARS = 1500;
 
 export async function POST(request: Request) {

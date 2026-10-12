@@ -18,6 +18,7 @@ export function useFala() {
   const [suportado, setSuportado] = useState(false);
   const [ligado, setLigado] = useState(false);
   const [falando, setFalando] = useState(false);
+  const [preparando, setPreparando] = useState(false); // gerando o áudio no servidor
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const servidorIndisponivelRef = useRef(false); // se /api/falar não tem chave, nem tenta de novo
@@ -79,34 +80,49 @@ export function useFala() {
   const falarServidor = useCallback(async (texto: string): Promise<boolean> => {
     if (servidorIndisponivelRef.current) return false;
     try {
+      setPreparando(true);
       const r = await fetch("/api/falar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ texto }),
       });
-      if (r.status === 503) { servidorIndisponivelRef.current = true; return false; } // sem chave
-      if (!r.ok) return false;
+      if (r.status === 503) { servidorIndisponivelRef.current = true; setPreparando(false); return false; }
+      if (!r.ok) { setPreparando(false); return false; }
       const blob = await r.blob();
       const url = URL.createObjectURL(blob);
       const audio = audioRef.current!;
       audio.src = url;
       audio.onended = () => { setFalando(false); URL.revokeObjectURL(url); };
+      setPreparando(false);
       setFalando(true);
       await audio.play();
       return true;
     } catch {
+      setPreparando(false);
       return false;
     }
   }, []);
 
-  const falar = useCallback((texto: string) => {
-    if (!ligado || !texto) return;
+  // Núcleo da fala (usado tanto pela leitura automática quanto pelo botão Ouvir).
+  const executarFala = useCallback((texto: string) => {
     const limpo = texto.replace(/[*_#`>]/g, "").replace(/\s+/g, " ").trim();
     if (!limpo) return;
     parar();
-    // tenta o servidor (voz natural); se não rolar, usa o navegador.
     falarServidor(limpo).then((ok) => { if (!ok) falarNavegador(limpo); });
-  }, [ligado, parar, falarServidor, falarNavegador]);
+  }, [parar, falarServidor, falarNavegador]);
+
+  // Leitura automática: só se a voz estiver ligada.
+  const falar = useCallback((texto: string) => {
+    if (!ligado || !texto) return;
+    executarFala(texto);
+  }, [ligado, executarFala]);
+
+  // Ouvir sob demanda (botão em cada mensagem): sempre fala, mesmo com voz
+  // global desligada. É um gesto direto do usuário — ótimo para o iOS.
+  const ouvir = useCallback((texto: string) => {
+    if (!texto) return;
+    executarFala(texto);
+  }, [executarFala]);
 
   // Ao ligar, "destrava" o áudio no iOS tocando algo dentro do gesto.
   const alternarLigado = useCallback(() => {
@@ -129,5 +145,5 @@ export function useFala() {
     });
   }, [parar]);
 
-  return { suportado, ligado, falando, alternarLigado, falar, parar };
+  return { suportado, ligado, falando, preparando, alternarLigado, falar, ouvir, parar };
 }
