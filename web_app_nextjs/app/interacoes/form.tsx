@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useDitado } from "../use-ditado";
+import { IconMic, IconStop } from "../icons";
 
 type Interacao = {
   id: string;
@@ -144,12 +145,13 @@ export default function InteracoesForm() {
                 onClick={ditarObservacao}
                 disabled={transcrevendo}
                 title={ouvindo ? "Parar e transcrever" : "Ditar observação"}
-                style={{ background: ouvindo ? "#C0392B" : "#EEF2F8", color: ouvindo ? "#fff" : "#1F3864",
-                  border: "1px solid " + (ouvindo ? "#C0392B" : "#D6DEEA"), borderRadius: 8,
-                  padding: "3px 10px", fontSize: 13, cursor: transcrevendo ? "wait" : "pointer", marginBottom: 4,
+                style={{ display: "inline-flex", alignItems: "center", gap: 6,
+                  background: ouvindo ? "var(--grad-verde)" : "rgba(255,255,255,.8)", color: ouvindo ? "#fff" : "var(--elo-azul)",
+                  border: "1px solid " + (ouvindo ? "transparent" : "var(--glass-borda)"), borderRadius: "var(--r-full)",
+                  padding: "4px 12px", fontSize: 12, fontWeight: 600, cursor: transcrevendo ? "wait" : "pointer", marginBottom: 4,
                   opacity: transcrevendo ? 0.6 : 1 }}
               >
-                {transcrevendo ? "transcrevendo…" : ouvindo ? "■ gravando…" : "🎤 ditar"}
+                {transcrevendo ? "transcrevendo…" : ouvindo ? <><IconStop size={13} /> gravando…</> : <><IconMic size={14} /> ditar</>}
               </button>
             )}
           </div>

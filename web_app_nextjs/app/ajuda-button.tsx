@@ -11,10 +11,13 @@ export default function AjudaButton({ titulo, children }: { titulo: string; chil
         onClick={() => setAberto(true)}
         title="Ajuda"
         aria-label="Ajuda"
-        style={{ background: "#EEF2F8", color: "#1F3864", border: "1px solid #D6DEEA",
-          borderRadius: 8, padding: "8px 12px", fontSize: 13, cursor: "pointer" }}
+        className="elo-link"
+        style={{ background: "rgba(255,255,255,.7)", border: "1px solid var(--glass-borda)", cursor: "pointer" }}
       >
-        ❓ Ajuda
+        <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
+          strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" />
+          <path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" /><path d="M12 17h.01" /></svg>
+        Ajuda
       </button>
 
       {aberto && (

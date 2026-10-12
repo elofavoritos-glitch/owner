@@ -7,6 +7,8 @@ import Link from "next/link";
 import Charts from "./charts";
 import SairButton from "./sair-button";
 import AjudaButton from "./ajuda-button";
+import Logo from "./logo";
+import { IconClientes, IconInteracoes, IconPropostas, IconAssistente } from "./icons";
 
 // A página depende de cookies/sessão: precisa ser renderizada dinamicamente.
 export const dynamic = "force-dynamic";
@@ -69,35 +71,20 @@ export default async function Dashboard() {
   ];
 
   return (
-    <main className="elo-main" style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
+    <main className="elo-main">
       <header className="elo-header">
-        <h1 style={{ color: "#1F3864", margin: 0 }}>Painel Comercial — ELO</h1>
+        <div className="elo-brand">
+          <Logo size={38} />
+          <div>
+            <div className="elo-wordmark">ELO</div>
+            <div className="elo-sub">Painel Comercial</div>
+          </div>
+        </div>
         <div className="elo-actions">
-          <Link
-            href="/clientes"
-            style={{ color: "#2E75B6", padding: "8px 10px", fontSize: 13, textDecoration: "none" }}
-          >
-            🏢 Clientes
-          </Link>
-          <Link
-            href="/interacoes"
-            style={{ color: "#2E75B6", padding: "8px 10px", fontSize: 13, textDecoration: "none" }}
-          >
-            📇 Interações
-          </Link>
-          <Link
-            href="/propostas"
-            style={{ color: "#2E75B6", padding: "8px 10px", fontSize: 13, textDecoration: "none" }}
-          >
-            📄 Propostas
-          </Link>
-          <Link
-            href="/assistente"
-            style={{ background: "#2E75B6", color: "#fff", padding: "8px 14px", borderRadius: 8,
-              fontSize: 13, textDecoration: "none", fontWeight: 600 }}
-          >
-            💬 Assistente
-          </Link>
+          <Link href="/clientes" className="elo-link"><IconClientes /> Clientes</Link>
+          <Link href="/interacoes" className="elo-link"><IconInteracoes /> Interações</Link>
+          <Link href="/propostas" className="elo-link"><IconPropostas /> Propostas</Link>
+          <Link href="/assistente" className="elo-link elo-link--primary"><IconAssistente /> Assistente</Link>
           <AjudaButton titulo="Como ler o Painel">
             <p>Os indicadores consideram as oportunidades que você tem permissão de ver
             (comercial: sua carteira; gestor: o time todo).</p>
@@ -109,18 +96,18 @@ export default async function Dashboard() {
               <li><strong>Taxa de conversão</strong> — ganhas ÷ (ganhas + perdidas).</li>
               <li><strong>Em risco</strong> — abertas sem próxima ação definida ou com ação atrasada.</li>
             </ul>
-            <p>Use o <strong>📇 Interações</strong> para registrar contatos e o
-            <strong> 💬 Assistente</strong> para consultar e analisar clientes em conversa (inclusive por voz).</p>
+            <p>Use <strong>Interações</strong> para registrar contatos e o
+            <strong> Assistente</strong> para consultar e analisar clientes em conversa (inclusive por voz).</p>
           </AjudaButton>
-          <span className="elo-email" style={{ color: "#607D8B", fontSize: 13 }}>{user.email}</span>
+          <span className="elo-email" style={{ color: "var(--txt-2)", fontSize: 13 }}>{user.email}</span>
           <SairButton />
         </div>
       </header>
       <section className="elo-kpis">
         {kpis.map((k) => (
-          <div key={k.l} style={{ background: "#fff", border: "1px solid #E3E8F0", borderRadius: 12, padding: 16 }}>
-            <div style={{ fontSize: 26, fontWeight: 800, color: k.cor || "#1F3864" }}>{k.v}</div>
-            <div style={{ fontSize: 12, color: "#607D8B", textTransform: "uppercase" }}>{k.l}</div>
+          <div key={k.l} className="elo-kpi">
+            <div className="elo-kpi__v" style={k.cor ? { color: k.cor } : undefined}>{k.v}</div>
+            <div className="elo-kpi__l">{k.l}</div>
           </div>
         ))}
       </section>

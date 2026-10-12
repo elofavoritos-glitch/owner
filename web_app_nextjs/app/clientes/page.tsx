@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase-server";
 import SairButton from "../sair-button";
 import AjudaButton from "../ajuda-button";
+import Logo from "../logo";
+import { IconVoltar, IconInteracoes, IconAssistente } from "../icons";
 import ClientesForm from "./form";
 
 export const dynamic = "force-dynamic";
@@ -26,13 +28,17 @@ export default async function Clientes() {
   return (
     <main className="elo-main" style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
       <header className="elo-header">
-        <div className="elo-nav">
-          <h1 style={{ color: "#1F3864", margin: 0, fontSize: 22 }}>Clientes — ELO</h1>
-          <Link href="/" style={{ color: "#2E75B6", fontSize: 14, textDecoration: "none" }}>← Painel</Link>
-          <Link href="/interacoes" style={{ color: "#2E75B6", fontSize: 14, textDecoration: "none" }}>📇 Interações</Link>
-          <Link href="/assistente" style={{ color: "#2E75B6", fontSize: 14, textDecoration: "none" }}>💬 Assistente</Link>
+        <div className="elo-brand">
+          <Logo size={34} />
+          <div>
+            <div className="elo-wordmark">Clientes</div>
+            <div className="elo-sub">Cadastro ELO</div>
+          </div>
         </div>
         <div className="elo-actions">
+          <Link href="/" className="elo-link"><IconVoltar /> Painel</Link>
+          <Link href="/interacoes" className="elo-link"><IconInteracoes /> Interações</Link>
+          <Link href="/assistente" className="elo-link"><IconAssistente /> Assistente</Link>
           <AjudaButton titulo="Cadastro de clientes">
             <p>Centralize aqui os dados dos clientes da ELO. Esse cadastro é a base para
             anexar documentos e para enriquecer as análises do assistente.</p>
