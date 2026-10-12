@@ -70,17 +70,30 @@ export default function Chat({ email }: { email: string }) {
             style={{
               alignSelf: m.role === "user" ? "flex-end" : "flex-start",
               maxWidth: "85%",
-              background: m.role === "user" ? "#1F3864" : "#fff",
+              background: m.role === "user" ? "var(--grad-azul-suave)" : "var(--glass-forte)",
               color: m.role === "user" ? "#fff" : "#1F2937",
-              border: m.role === "user" ? "none" : "1px solid #E3E8F0",
-              borderRadius: 12,
-              padding: "10px 14px",
+              border: m.role === "user" ? "none" : "1px solid var(--glass-borda)",
+              borderRadius: 16,
+              padding: "11px 15px",
               fontSize: 14,
               lineHeight: 1.5,
               whiteSpace: "pre-wrap",
+              boxShadow: "var(--sombra-sm)",
             }}
           >
             {m.content}
+            {m.role === "assistant" && i > 0 && falaSuportada && (
+              <button
+                type="button"
+                onClick={() => (falando ? pararFala() : falar(m.content))}
+                title="Ouvir"
+                style={{ display: "inline-flex", alignItems: "center", gap: 5, marginTop: 8,
+                  background: "rgba(46,117,182,.1)", color: "var(--elo-azul)", border: "none",
+                  borderRadius: "var(--r-full)", padding: "4px 11px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+              >
+                <IconSom size={13} /> Ouvir
+              </button>
+            )}
           </div>
         ))}
         {carregando && (
