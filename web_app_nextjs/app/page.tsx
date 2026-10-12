@@ -73,6 +73,12 @@ export default async function Dashboard() {
         <h1 style={{ color: "#1F3864", margin: 0 }}>Painel Comercial — ELO</h1>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <Link
+            href="/interacoes"
+            style={{ color: "#2E75B6", padding: "8px 10px", fontSize: 13, textDecoration: "none" }}
+          >
+            📇 Interações
+          </Link>
+          <Link
             href="/assistente"
             style={{ background: "#2E75B6", color: "#fff", padding: "8px 14px", borderRadius: 8,
               fontSize: 13, textDecoration: "none", fontWeight: 600 }}
