@@ -29,11 +29,8 @@ export default async function Assistente() {
     <main className="elo-main">
       <header className="elo-header">
         <div className="elo-brand">
-          <Logo size={34} />
-          <div>
-            <div className="elo-wordmark">Assistente</div>
-            <div className="elo-sub">Comercial ELO</div>
-          </div>
+          <Logo height={34} />
+          <span className="elo-sub" style={{ borderLeft: "1px solid var(--linha)", paddingLeft: 11, fontSize: 14 }}>Assistente</span>
         </div>
         <div className="elo-actions">
           <Link href="/" className="elo-link"><IconVoltar /> Painel</Link>
