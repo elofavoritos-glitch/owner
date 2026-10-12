@@ -35,6 +35,9 @@ jobs:
       - name: Lint (eslint)
         run: npm run lint
 
+      - name: Testes (vitest)
+        run: npm run test
+
       - name: Build (next build)
         run: npm run build
         env:
