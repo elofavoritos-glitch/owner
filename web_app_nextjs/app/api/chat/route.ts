@@ -16,8 +16,9 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
-// Modelo configurável; default é um Llama rápido e gratuito na Groq.
-const MODEL = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+// Modelo configurável; default disponível no free/developer tier da Groq e com
+// suporte a function-calling (os llama-3.x versatile viraram Enterprise).
+const MODEL = process.env.GROQ_MODEL || "openai/gpt-oss-20b";
 
 type ChatMsg = { role: "user" | "assistant"; content: string };
 
