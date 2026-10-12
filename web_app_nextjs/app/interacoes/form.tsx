@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useDitado } from "../use-ditado";
 
 type Interacao = {
   id: string;
@@ -36,6 +37,17 @@ export default function InteracoesForm() {
   const [assunto, setAssunto] = useState("");
   const [data, setData] = useState(hoje());
   const [observacao, setObservacao] = useState("");
+
+  // Ditado por voz para a observação: anexa a fala ao texto já existente.
+  const baseObsRef = useRef("");
+  const { suportado: vozSuportada, ouvindo, erro: erroVoz, alternar: alternarVoz } = useDitado((t) => {
+    const base = baseObsRef.current;
+    setObservacao(base ? `${base} ${t}` : t);
+  });
+  function ditarObservacao() {
+    if (!ouvindo) baseObsRef.current = observacao.trim();
+    alternarVoz();
+  }
 
   async function carregar() {
     setCarregandoLista(true);
@@ -124,8 +136,23 @@ export default function InteracoesForm() {
         </div>
 
         <div style={{ marginTop: 12 }}>
-          <label style={rotulo}>Observação</label>
-          <textarea value={observacao} onChange={(e) => setObservacao(e.target.value)} rows={3} placeholder="Detalhes do contato…" style={{ ...campo, resize: "vertical" }} />
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <label style={rotulo}>Observação</label>
+            {vozSuportada && (
+              <button
+                type="button"
+                onClick={ditarObservacao}
+                title={ouvindo ? "Parar de ouvir" : "Ditar observação"}
+                style={{ background: ouvindo ? "#C0392B" : "#EEF2F8", color: ouvindo ? "#fff" : "#1F3864",
+                  border: "1px solid " + (ouvindo ? "#C0392B" : "#D6DEEA"), borderRadius: 8,
+                  padding: "3px 10px", fontSize: 13, cursor: "pointer", marginBottom: 4 }}
+              >
+                {ouvindo ? "■ ouvindo…" : "🎤 ditar"}
+              </button>
+            )}
+          </div>
+          <textarea value={observacao} onChange={(e) => setObservacao(e.target.value)} rows={3} placeholder={ouvindo ? "Pode falar…" : "Detalhes do contato…"} style={{ ...campo, resize: "vertical", borderColor: ouvindo ? "#C0392B" : "#CBD5E1" }} />
+          {erroVoz && <p style={{ color: "#C0392B", fontSize: 12, margin: "4px 0 0" }}>{erroVoz}</p>}
         </div>
 
         {msg && (
