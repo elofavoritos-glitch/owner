@@ -11,8 +11,8 @@ import { supabaseServer } from "@/lib/supabase-server";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-// Voz PT-BR neural (natural). Configurável por env var.
-const VOZ = process.env.GOOGLE_TTS_VOICE || "pt-BR-Neural2-B";
+// Voz PT-BR natural. Chirp3-HD são as mais naturais do Google. Configurável.
+const VOZ = process.env.GOOGLE_TTS_VOICE || "pt-BR-Chirp3-HD-Charon";
 const MAX_CHARS = 1500;
 
 export async function POST(request: Request) {
@@ -44,7 +44,10 @@ export async function POST(request: Request) {
         body: JSON.stringify({
           input: { text: texto },
           voice: { languageCode: "pt-BR", name: VOZ },
-          audioConfig: { audioEncoding: "MP3", speakingRate: 1.03 },
+          // Chirp3-HD não aceita speakingRate; só aplica nas demais vozes.
+          audioConfig: VOZ.includes("Chirp3")
+            ? { audioEncoding: "MP3" }
+            : { audioEncoding: "MP3", speakingRate: 1.03 },
         }),
       },
     );
