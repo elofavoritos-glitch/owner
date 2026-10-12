@@ -24,14 +24,14 @@ export default async function Assistente() {
   if (!user) redirect("/login");
 
   return (
-    <main style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
-      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+    <main className="elo-main" style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
+      <header className="elo-header" style={{ marginBottom: 8 }}>
+        <div className="elo-nav">
           <h1 style={{ color: "#1F3864", margin: 0, fontSize: 22 }}>Assistente Comercial — ELO</h1>
           <Link href="/" style={{ color: "#2E75B6", fontSize: 14, textDecoration: "none" }}>← Painel</Link>
           <Link href="/clientes" style={{ color: "#2E75B6", fontSize: 14, textDecoration: "none" }}>🏢 Clientes</Link>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div className="elo-actions">
           <AjudaButton titulo="Como usar o Assistente">
             <p>O assistente comercial usa os dados reais da ELO e <strong>nunca inventa informações</strong>.</p>
             <p><strong>O que você pode pedir:</strong></p>
@@ -47,7 +47,7 @@ export default async function Assistente() {
             <p style={{ color: "#64748B", fontSize: 13 }}>O assistente respeita suas permissões: um comercial
             vê a própria carteira; um gestor vê o time todo.</p>
           </AjudaButton>
-          <span style={{ color: "#607D8B", fontSize: 13 }}>{user.email}</span>
+          <span className="elo-email" style={{ color: "#607D8B", fontSize: 13 }}>{user.email}</span>
           <SairButton />
         </div>
       </header>

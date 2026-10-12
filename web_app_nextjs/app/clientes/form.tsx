@@ -90,7 +90,7 @@ export default function ClientesForm() {
     <div style={{ marginBottom: 4 }}>
       <ImportarPlanilha aoImportar={() => carregar(busca)} />
     </div>
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(340px, 440px) 1fr", gap: 20, alignItems: "start", marginTop: 16 }}>
+    <div className="elo-split" style={{ marginTop: 16 }}>
       {/* Formulário */}
       <form onSubmit={salvar} style={card}>
         <h2 style={{ color: "#1F3864", fontSize: 16, marginTop: 0 }}>Novo cliente</h2>

@@ -19,7 +19,7 @@ export default function Charts({ etapas, ganhas, perdidas }: { etapas: Etapa[]; 
   const card: React.CSSProperties = { background: "#fff", border: "1px solid #E3E8F0", borderRadius: 12, padding: 18 };
 
   return (
-    <section style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+    <section className="elo-charts">
       <div style={card}>
         <h2 style={{ color: "#1F3864", fontSize: 15 }}>Pipeline por etapa</h2>
         <ResponsiveContainer width="100%" height={260}>

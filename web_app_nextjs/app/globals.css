@@ -1,0 +1,79 @@
+/* Estilos globais e utilitários responsivos do painel ELO. */
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; padding: 0; }
+
+/* Em telas pequenas, remove o padding lateral grande das páginas. */
+@media (max-width: 640px) {
+  .elo-main { padding: 14px !important; }
+}
+
+/* Cabeçalho das páginas: no mobile vira coluna e os itens quebram linha. */
+.elo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.elo-nav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.elo-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+@media (max-width: 760px) {
+  .elo-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .elo-nav { gap: 10px; row-gap: 6px; }
+  .elo-actions { gap: 8px; }
+  .elo-header h1 { font-size: 19px !important; }
+  /* esconde o e-mail do usuário no mobile para não poluir */
+  .elo-email { display: none !important; }
+}
+
+/* Grid de duas colunas (formulário + lista) que empilha no mobile. */
+.elo-split {
+  display: grid;
+  grid-template-columns: minmax(320px, 420px) 1fr;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 860px) {
+  .elo-split { grid-template-columns: 1fr; }
+}
+
+/* KPIs do painel: cartões fluidos. */
+.elo-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin: 16px 0;
+}
+
+/* Gráficos: lado a lado no desktop, empilhados no mobile. */
+.elo-charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 760px) {
+  .elo-charts { grid-template-columns: 1fr; }
+}
+
+/* Tabelas largas rolam horizontalmente dentro do container. */
+.elo-scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* Alvos de toque confortáveis no mobile. */
+@media (max-width: 640px) {
+  button, input, select, textarea { font-size: 16px !important; } /* evita zoom no iOS */
+}

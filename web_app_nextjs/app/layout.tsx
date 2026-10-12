@@ -1,4 +1,14 @@
+import type { Viewport } from "next";
+import "./globals.css";
+
 export const metadata = { title: "ELO — Painel Comercial", description: "Dashboards comerciais da ELO" };
+
+// Essencial para responsividade: faz o celular renderizar na largura real.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#1F3864",
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

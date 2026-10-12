@@ -101,7 +101,7 @@ export default function InteracoesForm() {
   const card: React.CSSProperties = { background: "#fff", border: "1px solid #E3E8F0", borderRadius: 12, padding: 20 };
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(320px, 420px) 1fr", gap: 20, alignItems: "start" }}>
+    <div className="elo-split">
       {/* Formulário */}
       <form onSubmit={salvar} style={card}>
         <h2 style={{ color: "#1F3864", fontSize: 16, marginTop: 0 }}>Registrar interação</h2>
