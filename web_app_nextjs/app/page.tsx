@@ -6,6 +6,7 @@ import { resumo, porEtapa, moeda, type Oportunidade } from "@/lib/metrics";
 import Link from "next/link";
 import Charts from "./charts";
 import SairButton from "./sair-button";
+import AjudaButton from "./ajuda-button";
 
 // A página depende de cookies/sessão: precisa ser renderizada dinamicamente.
 export const dynamic = "force-dynamic";
@@ -85,6 +86,20 @@ export default async function Dashboard() {
           >
             💬 Assistente
           </Link>
+          <AjudaButton titulo="Como ler o Painel">
+            <p>Os indicadores consideram as oportunidades que você tem permissão de ver
+            (comercial: sua carteira; gestor: o time todo).</p>
+            <ul>
+              <li><strong>Pipeline potencial</strong> — soma do valor de todas as oportunidades.</li>
+              <li><strong>Previsão ponderada</strong> — soma do valor multiplicado pela probabilidade de cada
+              oportunidade (expectativa mais realista de receita).</li>
+              <li><strong>Oportunidades abertas</strong> — ainda em andamento (nem ganhas, nem perdidas).</li>
+              <li><strong>Taxa de conversão</strong> — ganhas ÷ (ganhas + perdidas).</li>
+              <li><strong>Em risco</strong> — abertas sem próxima ação definida ou com ação atrasada.</li>
+            </ul>
+            <p>Use o <strong>📇 Interações</strong> para registrar contatos e o
+            <strong> 💬 Assistente</strong> para consultar e analisar clientes em conversa (inclusive por voz).</p>
+          </AjudaButton>
           <span style={{ color: "#607D8B", fontSize: 13 }}>{user.email}</span>
           <SairButton />
         </div>
