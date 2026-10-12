@@ -50,8 +50,8 @@ export default async function Interacoes() {
               <li><strong>Esfriado (reativar)</strong> — houve retorno, mas o último contato tem mais de 120 dias.</li>
               <li><strong>Ativo</strong> — houve retorno e o contato é recente.</li>
             </ul>
-            <p><strong>🎤</strong> Use o botão de ditar na Observação para falar em vez de digitar
-            (melhor no Chrome/Edge/Android).</p>
+            <p><strong>🎤</strong> Use o botão &quot;ditar&quot; na Observação: toque, fale e toque de novo
+            para parar — a transcrição aparece em seguida. Funciona em qualquer navegador, incluindo iPhone.</p>
           </AjudaButton>
           <span className="elo-email" style={{ color: "#607D8B", fontSize: 13 }}>{user.email}</span>
           <SairButton />

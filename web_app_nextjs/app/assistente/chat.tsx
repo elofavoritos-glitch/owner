@@ -23,7 +23,9 @@ export default function Chat({ email }: { email: string }) {
   const [input, setInput] = useState("");
   const [carregando, setCarregando] = useState(false);
   const fim = useRef<HTMLDivElement>(null);
-  const { suportado, ouvindo, erro: erroVoz, alternar } = useDitado(setInput);
+  const { suportado, ouvindo, transcrevendo, erro: erroVoz, alternar } = useDitado(
+    (t) => setInput((prev) => (prev ? `${prev} ${t}` : t)),
+  );
 
   useEffect(() => {
     fim.current?.scrollIntoView({ behavior: "smooth" });
@@ -108,19 +110,20 @@ export default function Chat({ email }: { email: string }) {
           <button
             type="button"
             onClick={alternar}
-            title={ouvindo ? "Parar de ouvir" : "Falar"}
-            aria-label={ouvindo ? "Parar de ouvir" : "Falar"}
+            disabled={transcrevendo}
+            title={ouvindo ? "Parar e transcrever" : "Gravar e falar"}
+            aria-label={ouvindo ? "Parar e transcrever" : "Gravar e falar"}
             style={{ width: 46, flexShrink: 0, background: ouvindo ? "#C0392B" : "#EEF2F8",
               color: ouvindo ? "#fff" : "#1F3864", border: "1px solid " + (ouvindo ? "#C0392B" : "#D6DEEA"),
-              borderRadius: 10, fontSize: 18, cursor: "pointer" }}
+              borderRadius: 10, fontSize: 18, cursor: transcrevendo ? "wait" : "pointer", opacity: transcrevendo ? 0.6 : 1 }}
           >
-            {ouvindo ? "■" : "🎤"}
+            {transcrevendo ? "…" : ouvindo ? "■" : "🎤"}
           </button>
         )}
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder={ouvindo ? "Ouvindo… pode falar" : "Pergunte, ou toque no 🎤 para falar…"}
+          placeholder={ouvindo ? "Gravando… toque em ■ para transcrever" : transcrevendo ? "Transcrevendo…" : "Pergunte, ou toque no 🎤 para falar…"}
           style={{ flex: 1, padding: "12px 14px", border: "1px solid " + (ouvindo ? "#C0392B" : "#CBD5E1"),
             borderRadius: 10, fontSize: 14 }}
         />
