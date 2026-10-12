@@ -84,9 +84,22 @@ export async function POST(request: Request) {
       responsavel_nome: r.responsavel_nome || respNome,
     }));
 
-    const { data, error } = await supabase.from(destino).insert(comResp).select("id");
-    if (error) return NextResponse.json({ erro: error.message }, { status: 500 });
-    return NextResponse.json({ ok: true, inseridos: data?.length ?? 0, ignoradas });
+    // Insere em lotes para não estourar memória/timeout com planilhas grandes.
+    const LOTE = 500;
+    let inseridos = 0;
+    for (let i = 0; i < comResp.length; i += LOTE) {
+      const chunk = comResp.slice(i, i + LOTE);
+      const { data, error } = await supabase.from(destino).insert(chunk).select("id");
+      if (error) {
+        console.error("POST /api/importar:", error.message);
+        return NextResponse.json(
+          { erro: "Falha ao importar. Verifique os dados da planilha.", inseridos },
+          { status: 500 },
+        );
+      }
+      inseridos += data?.length ?? 0;
+    }
+    return NextResponse.json({ ok: true, inseridos, ignoradas });
   }
 
   return NextResponse.json({ erro: "Ação inválida." }, { status: 400 });

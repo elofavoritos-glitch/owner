@@ -50,6 +50,8 @@ function norm(s: string): string {
 export type Planilha = { cabecalhos: string[]; linhas: Record<string, unknown>[] };
 
 // Lê o buffer (xlsx ou csv) e devolve cabeçalhos + linhas como objetos.
+export const MAX_LINHAS = 5000;
+
 export function lerPlanilha(buffer: ArrayBuffer): Planilha {
   const wb = XLSX.read(buffer, { type: "array" });
   const primeira = wb.SheetNames[0];
@@ -62,9 +64,18 @@ export function lerPlanilha(buffer: ArrayBuffer): Planilha {
   });
   if (!matriz.length) throw new Error("Planilha sem dados.");
 
-  const cabecalhos = (matriz[0] as unknown[]).map((h) => String(h ?? "").trim());
+  // Desduplica cabeçalhos vazios/repetidos para não sobrescrever colunas.
+  const vistos = new Map<string, number>();
+  const cabecalhos = (matriz[0] as unknown[]).map((h, i) => {
+    let nome = String(h ?? "").trim() || `coluna_${i + 1}`;
+    const n = vistos.get(nome) ?? 0;
+    vistos.set(nome, n + 1);
+    if (n > 0) nome = `${nome} (${n + 1})`;
+    return nome;
+  });
+
   const linhas: Record<string, unknown>[] = [];
-  for (let i = 1; i < matriz.length; i++) {
+  for (let i = 1; i < matriz.length && linhas.length < MAX_LINHAS; i++) {
     const row = matriz[i] as unknown[];
     if (!row || row.every((c) => String(c ?? "").trim() === "")) continue;
     const obj: Record<string, unknown> = {};
@@ -92,8 +103,17 @@ export function mapearColunas(cabecalhos: string[], destino: Destino): Record<st
 function numero(v: unknown): number {
   if (typeof v === "number") return v;
   const s = String(v ?? "").replace(/[^\d,.-]/g, "");
-  // trata formato brasileiro (1.234,56) e simples
-  const normalizado = s.includes(",") ? s.replace(/\./g, "").replace(",", ".") : s;
+  if (!s) return 0;
+  let normalizado: string;
+  if (s.includes(",")) {
+    // formato BR: vírgula é decimal, pontos são milhares (1.234,56)
+    normalizado = s.replace(/\./g, "").replace(",", ".");
+  } else if ((s.match(/\./g) || []).length > 1) {
+    // múltiplos pontos sem vírgula = separador de milhar (1.234.567)
+    normalizado = s.replace(/\./g, "");
+  } else {
+    normalizado = s;
+  }
   const n = parseFloat(normalizado);
   return Number.isNaN(n) ? 0 : n;
 }

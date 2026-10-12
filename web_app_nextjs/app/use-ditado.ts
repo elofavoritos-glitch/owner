@@ -38,6 +38,10 @@ export function useDitado(onTexto: (texto: string) => void) {
 
   useEffect(() => {
     setSuportado(Boolean(getRecognitionCtor()));
+    // Cleanup: se o componente desmontar durante a captura, aborta o microfone.
+    return () => {
+      recRef.current?.abort();
+    };
   }, []);
 
   const parar = useCallback(() => {

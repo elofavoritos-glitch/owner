@@ -2,6 +2,7 @@
 // respeitando a RLS. O responsável é sempre o usuário logado.
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
+import { escaparBusca, validarData, texto, erroGenerico } from "@/lib/seguranca";
 
 export const dynamic = "force-dynamic";
 
@@ -29,10 +30,16 @@ export async function GET(request: Request) {
     .select("id,empresa,canal,direcao,assunto,data_interacao,observacao,responsavel_nome")
     .order("data_interacao", { ascending: false })
     .limit(100);
-  if (empresa) q = q.ilike("empresa", `%${empresa}%`);
+  if (empresa) {
+    const b = escaparBusca(empresa);
+    if (b) q = q.ilike("empresa", `%${b}%`);
+  }
 
   const { data, error } = await q;
-  if (error) return NextResponse.json({ erro: error.message }, { status: 500 });
+  if (error) {
+    console.error("GET /api/interacoes:", error.message);
+    return NextResponse.json({ erro: erroGenerico("listar as interações") }, { status: 500 });
+  }
   return NextResponse.json({ interacoes: data ?? [] });
 }
 
@@ -42,7 +49,7 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ erro: "Não autenticado." }, { status: 401 });
 
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
-  const empresa = String(body.empresa ?? "").trim();
+  const empresa = texto(body.empresa, 160);
   if (!empresa) return NextResponse.json({ erro: "Informe a empresa." }, { status: 400 });
 
   const canal = String(body.canal ?? "email");
@@ -60,12 +67,15 @@ export async function POST(request: Request) {
     responsavel_nome: responsavelNome,
     canal,
     direcao,
-    assunto: body.assunto ? String(body.assunto).trim() : null,
-    data_interacao: String(body.data_interacao || new Date().toISOString().slice(0, 10)),
-    observacao: body.observacao ? String(body.observacao).trim() : null,
+    assunto: texto(body.assunto, 200),
+    data_interacao: validarData(body.data_interacao) || new Date().toISOString().slice(0, 10),
+    observacao: texto(body.observacao, 2000),
   };
 
   const { data, error } = await supabase.from("interacoes").insert(registro).select().single();
-  if (error) return NextResponse.json({ erro: error.message }, { status: 500 });
+  if (error) {
+    console.error("POST /api/interacoes:", error.message);
+    return NextResponse.json({ erro: erroGenerico("registrar a interação") }, { status: 500 });
+  }
   return NextResponse.json({ interacao: data }, { status: 201 });
 }

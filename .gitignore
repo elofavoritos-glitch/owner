@@ -29,6 +29,7 @@ web_app_nextjs/.next/
 .next/
 .env.local
 *.local
+*.tsbuildinfo
 
 # Dashboard: dataset é gerado; manter apenas o gerador e o fallback versionado é opcional
 web_dashboard/data.json

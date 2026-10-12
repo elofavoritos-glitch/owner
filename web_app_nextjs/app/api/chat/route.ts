@@ -12,6 +12,7 @@ import {
   montarDossie, analisarDiagnostico, calcularScore, classificarRelacionamento,
   type Evidencias, type Interacao,
 } from "@/lib/elo-intelligence";
+import { escaparBusca, validarData, texto } from "@/lib/seguranca";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -47,9 +48,9 @@ async function executarTool(
         responsavel_nome: perfil?.nome || user.email || null,
         canal,
         direcao,
-        assunto: input.assunto ? String(input.assunto).trim() : null,
-        data_interacao: String(input.data_interacao || new Date().toISOString().slice(0, 10)),
-        observacao: input.observacao ? String(input.observacao).trim() : null,
+        assunto: texto(input.assunto, 200),
+        data_interacao: validarData(input.data_interacao) || new Date().toISOString().slice(0, 10),
+        observacao: texto(input.observacao, 2000),
       };
       const { data, error } = await supabase.from("interacoes").insert(registro).select().single();
       if (error) return JSON.stringify({ erro: error.message });
@@ -75,7 +76,7 @@ async function executarTool(
       const { data, error } = await supabase
         .from("interacoes")
         .select("canal,direcao,assunto,data_interacao,responsavel_nome")
-        .ilike("empresa", `%${empresa}%`)
+        .ilike("empresa", `%${escaparBusca(empresa)}%`)
         .order("data_interacao", { ascending: false })
         .limit(200);
       if (error) return JSON.stringify({ erro: error.message });
@@ -86,7 +87,7 @@ async function executarTool(
       let q = supabase
         .from("oportunidades")
         .select("cliente_nome,responsavel_nome,servico,etapa,status,valor_potencial,probabilidade,proxima_acao,data_proxima_acao");
-      if (input.filtro_cliente) q = q.ilike("cliente_nome", `%${String(input.filtro_cliente)}%`);
+      if (input.filtro_cliente) q = q.ilike("cliente_nome", `%${escaparBusca(String(input.filtro_cliente))}%`);
       if (input.etapa) q = q.eq("etapa", String(input.etapa));
       const { data, error } = await q.limit(50);
       if (error) return JSON.stringify({ erro: error.message });
