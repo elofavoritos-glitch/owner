@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ELO — Painel Comercial</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">ELO</span>
+      <div class="brand-text">
+        <strong>Soluções Logísticas Integradas</strong>
+        <small>Painel Comercial</small>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <label for="filtro-vendedor">Vendedor</label>
+      <select id="filtro-vendedor"><option value="">Todos</option></select>
+      <button id="btn-pdf" class="btn">Exportar relatório (impressão/PDF)</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Indicadores -->
+    <section class="kpis" id="kpis"></section>
+
+    <!-- Gráficos principais -->
+    <section class="grid-2">
+      <div class="card">
+        <h2>Pipeline por etapa</h2>
+        <div id="chart-funil" class="chart"></div>
+      </div>
+      <div class="card">
+        <h2>Previsão ponderada por etapa</h2>
+        <div id="chart-ponderado" class="chart"></div>
+      </div>
+    </section>
+
+    <section class="grid-2">
+      <div class="card">
+        <h2>Conversão (ganhas x perdidas)</h2>
+        <div id="chart-conversao" class="chart chart-center"></div>
+      </div>
+      <div class="card">
+        <h2>Metas por vendedor (atingimento)</h2>
+        <div id="chart-metas" class="chart"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Evolução mensal — proposto x ganho</h2>
+      <div id="chart-evolucao" class="chart"></div>
+    </section>
+
+    <section class="card">
+      <h2>Produtividade por vendedor</h2>
+      <div id="tabela-produtividade"></div>
+    </section>
+
+    <!-- Tabelas -->
+    <section class="grid-2">
+      <div class="card">
+        <h2>Oportunidades em risco</h2>
+        <div id="tabela-risco"></div>
+      </div>
+      <div class="card">
+        <h2>Ranking de vendedores</h2>
+        <div id="tabela-ranking"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Carteira de oportunidades</h2>
+      <div id="tabela-oportunidades"></div>
+    </section>
+
+    <footer class="rodape">
+      <span id="rodape-info"></span>
+      <span class="aviso">Dados de demonstração — substituir pela base real antes do uso.</span>
+    </footer>
+  </main>
+
+  <script src="data.js"></script>
+  <script src="dashboard.js"></script>
+</body>
+</html>

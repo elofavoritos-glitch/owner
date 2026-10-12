@@ -21,3 +21,14 @@ word_agent/proposta_elo_exemplo.docx
 
 # Configuração local do Kiro
 .kiro/
+
+# Next.js / Node
+node_modules/
+web_app_nextjs/node_modules/
+web_app_nextjs/.next/
+.next/
+.env.local
+*.local
+
+# Dashboard: dataset é gerado; manter apenas o gerador e o fallback versionado é opcional
+web_dashboard/data.json
