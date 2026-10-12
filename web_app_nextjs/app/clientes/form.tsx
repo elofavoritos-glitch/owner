@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Documentos from "./documentos";
 
 type Cliente = {
   id: string;
@@ -20,6 +21,7 @@ export default function ClientesForm() {
   const [lista, setLista] = useState<Cliente[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [busca, setBusca] = useState("");
+  const [selecionado, setSelecionado] = useState<Cliente | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [msg, setMsg] = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
 
@@ -172,22 +174,33 @@ export default function ClientesForm() {
           <p style={{ color: "#90A4AE", fontSize: 14 }}>Nenhum cliente encontrado.</p>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: "62vh", overflowY: "auto" }}>
-            {lista.map((c) => (
-              <div key={c.id} style={{ border: "1px solid #EEF2F8", borderRadius: 10, padding: "10px 14px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                  <strong style={{ color: "#1F3864", fontSize: 14 }}>{c.empresa}</strong>
-                  {c.uf && <span style={{ fontSize: 12, color: "#90A4AE" }}>{c.cidade ? `${c.cidade}/` : ""}{c.uf}</span>}
-                </div>
-                <div style={{ fontSize: 12, color: "#607D8B", marginTop: 2 }}>
-                  {[c.cnpj, c.segmento, c.contato].filter(Boolean).join(" · ") || "sem detalhes"}
-                </div>
-                {(c.email || c.telefone) && (
-                  <div style={{ fontSize: 12, color: "#64748B", marginTop: 2 }}>
-                    {[c.email, c.telefone].filter(Boolean).join(" · ")}
+            {lista.map((c) => {
+              const aberto = selecionado?.id === c.id;
+              return (
+                <div key={c.id} style={{ border: "1px solid " + (aberto ? "#2E75B6" : "#EEF2F8"), borderRadius: 10, padding: "10px 14px" }}>
+                  <div
+                    onClick={() => setSelecionado(aberto ? null : c)}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                      <strong style={{ color: "#1F3864", fontSize: 14 }}>{c.empresa}</strong>
+                      <span style={{ fontSize: 12, color: "#90A4AE" }}>
+                        {c.uf ? `${c.cidade ? c.cidade + "/" : ""}${c.uf}` : ""} {aberto ? "▲" : "▾"}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 12, color: "#607D8B", marginTop: 2 }}>
+                      {[c.cnpj, c.segmento, c.contato].filter(Boolean).join(" · ") || "sem detalhes"}
+                    </div>
+                    {(c.email || c.telefone) && (
+                      <div style={{ fontSize: 12, color: "#64748B", marginTop: 2 }}>
+                        {[c.email, c.telefone].filter(Boolean).join(" · ")}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            ))}
+                  {aberto && <Documentos clienteId={c.id} empresa={c.empresa} />}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
