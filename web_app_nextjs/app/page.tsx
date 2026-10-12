@@ -74,11 +74,7 @@ export default async function Dashboard() {
     <main className="elo-main">
       <header className="elo-header">
         <div className="elo-brand">
-          <Logo size={38} />
-          <div>
-            <div className="elo-wordmark">ELO</div>
-            <div className="elo-sub">Painel Comercial</div>
-          </div>
+          <Logo height={40} />
         </div>
         <div className="elo-actions">
           <Link href="/clientes" className="elo-link"><IconClientes /> Clientes</Link>

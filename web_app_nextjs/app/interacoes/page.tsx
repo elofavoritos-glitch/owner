@@ -29,11 +29,8 @@ export default async function Interacoes() {
     <main className="elo-main" style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
       <header className="elo-header">
         <div className="elo-brand">
-          <Logo size={34} />
-          <div>
-            <div className="elo-wordmark">Interações</div>
-            <div className="elo-sub">Relacionamento ELO</div>
-          </div>
+          <Logo height={34} />
+          <span className="elo-sub" style={{ borderLeft: "1px solid var(--linha)", paddingLeft: 11, fontSize: 14 }}>Interações</span>
         </div>
         <div className="elo-actions">
           <Link href="/" className="elo-link"><IconVoltar /> Painel</Link>
