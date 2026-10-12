@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase-server";
 import SairButton from "../sair-button";
 import AjudaButton from "../ajuda-button";
+import Logo from "../logo";
+import { IconVoltar, IconClientes, IconAssistente } from "../icons";
 import InteracoesForm from "./form";
 
 export const dynamic = "force-dynamic";
@@ -26,13 +28,17 @@ export default async function Interacoes() {
   return (
     <main className="elo-main" style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
       <header className="elo-header">
-        <div className="elo-nav">
-          <h1 style={{ color: "#1F3864", margin: 0, fontSize: 22 }}>Interações — ELO</h1>
-          <Link href="/" style={{ color: "#2E75B6", fontSize: 14, textDecoration: "none" }}>← Painel</Link>
-          <Link href="/clientes" style={{ color: "#2E75B6", fontSize: 14, textDecoration: "none" }}>🏢 Clientes</Link>
-          <Link href="/assistente" style={{ color: "#2E75B6", fontSize: 14, textDecoration: "none" }}>💬 Assistente</Link>
+        <div className="elo-brand">
+          <Logo size={34} />
+          <div>
+            <div className="elo-wordmark">Interações</div>
+            <div className="elo-sub">Relacionamento ELO</div>
+          </div>
         </div>
         <div className="elo-actions">
+          <Link href="/" className="elo-link"><IconVoltar /> Painel</Link>
+          <Link href="/clientes" className="elo-link"><IconClientes /> Clientes</Link>
+          <Link href="/assistente" className="elo-link"><IconAssistente /> Assistente</Link>
           <AjudaButton titulo="Como registrar interações">
             <p>Aqui você registra cada contato com um cliente. Esse histórico alimenta o assistente,
             que passa a saber se e quando já falamos com cada empresa.</p>
@@ -50,7 +56,7 @@ export default async function Interacoes() {
               <li><strong>Esfriado (reativar)</strong> — houve retorno, mas o último contato tem mais de 120 dias.</li>
               <li><strong>Ativo</strong> — houve retorno e o contato é recente.</li>
             </ul>
-            <p><strong>🎤</strong> Use o botão &quot;ditar&quot; na Observação: toque, fale e toque de novo
+            <p>Use o botão &quot;ditar&quot; na Observação: toque, fale e toque de novo
             para parar — a transcrição aparece em seguida. Funciona em qualquer navegador, incluindo iPhone.</p>
           </AjudaButton>
           <span className="elo-email" style={{ color: "#607D8B", fontSize: 13 }}>{user.email}</span>

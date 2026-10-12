@@ -1,79 +1,168 @@
-/* Estilos globais e utilitários responsivos do painel ELO. */
+/* ===================================================================
+   Sistema de design — Painel Comercial ELO
+   Visual 2026: glassmorphism, gradientes vívidos, profundidade em camadas.
+   =================================================================== */
+
+:root {
+  /* Marca */
+  --elo-azul: #1F3864;
+  --elo-azul-2: #2E75B6;
+  --elo-ciano: #38BDF8;
+  --elo-verde: #22C55E;
+  --elo-vermelho: #F43F5E;
+
+  /* Texto */
+  --txt: #0B1E3B;
+  --txt-2: #475874;
+  --txt-3: #8695AE;
+
+  /* Linhas */
+  --linha: #E3EAF5;
+
+  /* Vidro (glassmorphism) */
+  --glass: rgba(255, 255, 255, 0.62);
+  --glass-forte: rgba(255, 255, 255, 0.78);
+  --glass-borda: rgba(255, 255, 255, 0.85);
+
+  /* Gradientes */
+  --grad-azul: linear-gradient(135deg, #1F3864 0%, #2E75B6 55%, #38BDF8 100%);
+  --grad-azul-suave: linear-gradient(135deg, #2E75B6 0%, #38BDF8 100%);
+  --grad-verde: linear-gradient(135deg, #16A34A 0%, #22C55E 100%);
+
+  /* Sombras */
+  --sombra-sm: 0 1px 2px rgba(15, 30, 59, 0.06), 0 2px 6px rgba(15, 30, 59, 0.06);
+  --sombra: 0 6px 20px rgba(15, 30, 59, 0.08), 0 2px 8px rgba(15, 30, 59, 0.05);
+  --sombra-lg: 0 18px 48px rgba(15, 30, 59, 0.16);
+  --sombra-azul: 0 10px 26px rgba(46, 117, 182, 0.40);
+
+  /* Raios */
+  --r-sm: 10px;
+  --r: 14px;
+  --r-lg: 18px;
+  --r-xl: 24px;
+  --r-full: 999px;
+
+  --font-ui: var(--font-inter), "Segoe UI", system-ui, sans-serif;
+  --font-num: var(--font-mono), ui-monospace, monospace;
+}
 
 * { box-sizing: border-box; }
-
 html, body { margin: 0; padding: 0; }
 
-/* Em telas pequenas, remove o padding lateral grande das páginas. */
-@media (max-width: 640px) {
-  .elo-main { padding: 14px !important; }
+body {
+  font-family: var(--font-ui);
+  color: var(--txt);
+  min-height: 100vh;
+  background: #EAF1FB;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+  overflow-x: hidden;
 }
 
-/* Cabeçalho das páginas: no mobile vira coluna e os itens quebram linha. */
+/* Blobs de gradiente ao fundo (profundidade por trás do vidro) */
+body::before {
+  content: "";
+  position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(620px 620px at 88% -8%, rgba(56, 189, 248, 0.38), transparent 60%),
+    radial-gradient(680px 680px at -6% 6%, rgba(46, 117, 182, 0.34), transparent 58%),
+    radial-gradient(760px 760px at 60% 112%, rgba(31, 56, 100, 0.26), transparent 60%);
+  filter: saturate(1.1);
+}
+
+/* ---------- Layout ---------- */
+.elo-main { max-width: 1220px; margin: 0 auto; padding: 28px 24px 56px; }
+@media (max-width: 640px) { .elo-main { padding: 16px 14px 36px !important; } }
+
+/* ---------- Cabeçalho (barra de vidro) ---------- */
 .elo-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-bottom: 24px; padding: 12px 16px;
+  background: var(--glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-borda); border-radius: var(--r-xl);
+  box-shadow: var(--sombra);
+  position: sticky; top: 12px; z-index: 20;
 }
-.elo-nav {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
+.elo-nav, .elo-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.elo-brand { display: flex; align-items: center; gap: 11px; }
+.elo-wordmark { font-weight: 800; font-size: 20px; color: var(--elo-azul); letter-spacing: 0.5px; line-height: 1; }
+.elo-sub { font-size: 11px; color: var(--txt-3); font-weight: 600; letter-spacing: .3px; }
+
+.elo-link {
+  color: var(--elo-azul); text-decoration: none; font-size: 13px; font-weight: 600;
+  padding: 8px 13px; border-radius: var(--r-full);
+  transition: background .15s, color .15s, box-shadow .15s;
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
 }
-.elo-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-@media (max-width: 760px) {
-  .elo-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .elo-nav { gap: 10px; row-gap: 6px; }
-  .elo-actions { gap: 8px; }
-  .elo-header h1 { font-size: 19px !important; }
-  /* esconde o e-mail do usuário no mobile para não poluir */
+.elo-link:hover { background: rgba(46, 117, 182, 0.12); }
+.elo-link--primary { background: var(--grad-azul-suave); color: #fff; box-shadow: var(--sombra-azul); }
+.elo-link--primary:hover { filter: brightness(1.06); }
+
+@media (max-width: 820px) {
+  .elo-header { flex-direction: column; align-items: flex-start; position: static; }
   .elo-email { display: none !important; }
 }
 
-/* Grid de duas colunas (formulário + lista) que empilha no mobile. */
-.elo-split {
-  display: grid;
-  grid-template-columns: minmax(320px, 420px) 1fr;
-  gap: 20px;
-  align-items: start;
+/* ---------- Cartões de vidro ---------- */
+.elo-card {
+  background: var(--glass-forte); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--glass-borda); border-radius: var(--r-xl);
+  box-shadow: var(--sombra); padding: 22px;
 }
-@media (max-width: 860px) {
-  .elo-split { grid-template-columns: 1fr; }
-}
+.elo-card--pad-sm { padding: 16px; }
 
-/* KPIs do painel: cartões fluidos. */
-.elo-kpis {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 16px;
-  margin: 16px 0;
+/* ---------- KPIs ---------- */
+.elo-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)); gap: 16px; margin: 22px 0; }
+.elo-kpi {
+  position: relative; overflow: hidden;
+  background: var(--glass-forte); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--glass-borda); border-radius: var(--r-xl);
+  box-shadow: var(--sombra); padding: 20px;
+  transition: transform .18s ease, box-shadow .18s ease;
 }
+.elo-kpi:hover { transform: translateY(-3px); box-shadow: var(--sombra-lg); }
+.elo-kpi::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 4px; background: var(--grad-azul); }
+.elo-kpi::after {
+  content: ""; position: absolute; right: -30px; top: -30px; width: 110px; height: 110px;
+  background: radial-gradient(circle, rgba(56,189,248,.20), transparent 70%); border-radius: 50%;
+}
+.elo-kpi__v { font-family: var(--font-num); font-size: 26px; font-weight: 700; line-height: 1.1; color: var(--elo-azul); letter-spacing: -0.5px; }
+.elo-kpi__l { font-size: 11px; color: var(--txt-2); text-transform: uppercase; letter-spacing: .7px; margin-top: 8px; font-weight: 700; }
 
-/* Gráficos: lado a lado no desktop, empilhados no mobile. */
-.elo-charts {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-@media (max-width: 760px) {
-  .elo-charts { grid-template-columns: 1fr; }
-}
+/* ---------- Gráficos ---------- */
+.elo-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 760px) { .elo-charts { grid-template-columns: 1fr; } }
 
-/* Tabelas largas rolam horizontalmente dentro do container. */
+/* ---------- Grids de formulário ---------- */
+.elo-split { display: grid; grid-template-columns: minmax(320px, 420px) 1fr; gap: 20px; align-items: start; }
+@media (max-width: 860px) { .elo-split { grid-template-columns: 1fr; } }
+
+/* ---------- Botões ---------- */
+.elo-btn {
+  border: none; cursor: pointer; font-weight: 700; font-size: 14px; font-family: var(--font-ui);
+  padding: 12px 18px; border-radius: var(--r);
+  background: var(--grad-azul-suave); color: #fff; box-shadow: var(--sombra-azul);
+  transition: filter .15s, transform .1s;
+}
+.elo-btn:hover:not(:disabled) { filter: brightness(1.07); }
+.elo-btn:active:not(:disabled) { transform: translateY(1px); }
+.elo-btn:disabled { opacity: .55; cursor: not-allowed; box-shadow: none; }
+.elo-btn--ghost { background: rgba(255,255,255,.7); color: var(--elo-azul); border: 1px solid var(--glass-borda); box-shadow: var(--sombra-sm); }
+.elo-btn--ghost:hover:not(:disabled) { background: #fff; filter: none; }
+
+/* ---------- Campos ---------- */
+.elo-input {
+  width: 100%; padding: 11px 13px; font-size: 14px; font-family: var(--font-ui);
+  border: 1px solid var(--linha); border-radius: var(--r-sm);
+  background: rgba(255,255,255,.85); color: var(--txt); box-sizing: border-box;
+  transition: border-color .15s, box-shadow .15s;
+}
+.elo-input:focus { outline: none; border-color: var(--elo-azul-2); box-shadow: 0 0 0 3px rgba(46, 117, 182, 0.18); }
+
+/* ---------- Utilitários ---------- */
 .elo-scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.elo-chip { display: inline-flex; align-items: center; gap: 6px; background: rgba(46,117,182,.12); color: var(--elo-azul); border-radius: var(--r-full); padding: 4px 10px; font-size: 12px; font-weight: 600; }
 
-/* Alvos de toque confortáveis no mobile. */
 @media (max-width: 640px) {
-  button, input, select, textarea { font-size: 16px !important; } /* evita zoom no iOS */
+  button, input, select, textarea { font-size: 16px !important; }
 }

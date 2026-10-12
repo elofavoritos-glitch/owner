@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase-server";
 import SairButton from "../sair-button";
 import AjudaButton from "../ajuda-button";
+import Logo from "../logo";
+import { IconVoltar, IconClientes, IconAssistente } from "../icons";
 import PropostasForm from "./form";
 
 export const dynamic = "force-dynamic";
@@ -26,13 +28,17 @@ export default async function Propostas() {
   return (
     <main className="elo-main" style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
       <header className="elo-header">
-        <div className="elo-nav">
-          <h1 style={{ color: "#1F3864", margin: 0, fontSize: 22 }}>Propostas — ELO</h1>
-          <Link href="/" style={{ color: "#2E75B6", fontSize: 14, textDecoration: "none" }}>← Painel</Link>
-          <Link href="/clientes" style={{ color: "#2E75B6", fontSize: 14, textDecoration: "none" }}>🏢 Clientes</Link>
-          <Link href="/assistente" style={{ color: "#2E75B6", fontSize: 14, textDecoration: "none" }}>💬 Assistente</Link>
+        <div className="elo-brand">
+          <Logo size={34} />
+          <div>
+            <div className="elo-wordmark">Propostas</div>
+            <div className="elo-sub">Comercial ELO</div>
+          </div>
         </div>
         <div className="elo-actions">
+          <Link href="/" className="elo-link"><IconVoltar /> Painel</Link>
+          <Link href="/clientes" className="elo-link"><IconClientes /> Clientes</Link>
+          <Link href="/assistente" className="elo-link"><IconAssistente /> Assistente</Link>
           <AjudaButton titulo="Como gerar propostas">
             <p>Monte uma proposta comercial em PDF com a identidade da ELO. O PDF é
             <strong> salvo automaticamente nos documentos do cliente</strong> e pode ser aberto/baixado.</p>
@@ -43,7 +49,7 @@ export default async function Propostas() {
               nunca inventamos preço.</li>
             </ul>
             <p style={{ color: "#64748B", fontSize: 13 }}>Você também pode pedir uma proposta ao
-            <strong> 💬 Assistente</strong> em conversa.</p>
+            <strong> Assistente</strong> em conversa.</p>
           </AjudaButton>
           <span className="elo-email" style={{ color: "#607D8B", fontSize: 13 }}>{user.email}</span>
           <SairButton />

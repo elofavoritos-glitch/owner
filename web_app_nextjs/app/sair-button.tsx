@@ -10,11 +10,7 @@ export default function SairButton() {
     router.refresh();
   }
   return (
-    <button
-      onClick={sair}
-      style={{ padding: "8px 14px", background: "#fff", color: "#1F3864",
-        border: "1px solid #CBD5E1", borderRadius: 8, fontSize: 13, cursor: "pointer" }}
-    >
+    <button onClick={sair} className="elo-btn elo-btn--ghost" style={{ padding: "8px 16px", fontSize: 13 }}>
       Sair
     </button>
   );

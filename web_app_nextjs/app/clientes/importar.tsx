@@ -1,5 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
+import { IconUpload } from "../icons";
 
 type Previa = {
   destino: string;
@@ -74,9 +75,11 @@ export default function ImportarPlanilha({ aoImportar }: { aoImportar: () => voi
   if (!aberto) {
     return (
       <button onClick={() => setAberto(true)}
-        style={{ padding: "9px 14px", background: "#70AD47", color: "#fff", border: "none",
-          borderRadius: 8, fontSize: 13, cursor: "pointer", fontWeight: 600 }}>
-        ⬆️ Importar planilha
+        style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "10px 16px",
+          background: "var(--grad-verde)", color: "#fff", border: "none",
+          borderRadius: "var(--r)", fontSize: 13, cursor: "pointer", fontWeight: 700,
+          boxShadow: "0 8px 20px rgba(34,197,94,.35)" }}>
+        <IconUpload /> Importar planilha
       </button>
     );
   }

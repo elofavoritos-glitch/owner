@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase-server";
 import SairButton from "../sair-button";
 import AjudaButton from "../ajuda-button";
+import Logo from "../logo";
+import { IconVoltar, IconClientes } from "../icons";
 import Chat from "./chat";
 
 export const dynamic = "force-dynamic";
@@ -24,14 +26,18 @@ export default async function Assistente() {
   if (!user) redirect("/login");
 
   return (
-    <main className="elo-main" style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
-      <header className="elo-header" style={{ marginBottom: 8 }}>
-        <div className="elo-nav">
-          <h1 style={{ color: "#1F3864", margin: 0, fontSize: 22 }}>Assistente Comercial — ELO</h1>
-          <Link href="/" style={{ color: "#2E75B6", fontSize: 14, textDecoration: "none" }}>← Painel</Link>
-          <Link href="/clientes" style={{ color: "#2E75B6", fontSize: 14, textDecoration: "none" }}>🏢 Clientes</Link>
+    <main className="elo-main">
+      <header className="elo-header">
+        <div className="elo-brand">
+          <Logo size={34} />
+          <div>
+            <div className="elo-wordmark">Assistente</div>
+            <div className="elo-sub">Comercial ELO</div>
+          </div>
         </div>
         <div className="elo-actions">
+          <Link href="/" className="elo-link"><IconVoltar /> Painel</Link>
+          <Link href="/clientes" className="elo-link"><IconClientes /> Clientes</Link>
           <AjudaButton titulo="Como usar o Assistente">
             <p>O assistente comercial usa os dados reais da ELO e <strong>nunca inventa informações</strong>.</p>
             <p><strong>O que você pode pedir:</strong></p>
@@ -41,7 +47,7 @@ export default async function Assistente() {
               <li>Ver relacionamento: <em>&quot;já falamos com a AgroInsumos?&quot;</em></li>
               <li>Registrar um contato: <em>&quot;registra: liguei pra MetalForte, pediram cotação&quot;</em></li>
             </ul>
-            <p><strong>🎤 Falar em vez de digitar:</strong> toque no microfone, fale e toque de novo para
+            <p><strong>Falar em vez de digitar:</strong> toque no microfone, fale e toque de novo para
             parar — a transcrição aparece em 1-2 segundos. Funciona em qualquer navegador, incluindo o
             iPhone/Safari. No primeiro uso, autorize o microfone.</p>
             <p style={{ color: "#64748B", fontSize: 13 }}>O assistente respeita suas permissões: um comercial

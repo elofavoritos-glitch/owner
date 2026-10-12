@@ -2,6 +2,7 @@
 import { useRef, useState, useEffect } from "react";
 import { useDitado } from "../use-ditado";
 import { useFala } from "../use-fala";
+import { IconMic, IconStop, IconEnviar, IconSom, IconSomOff } from "../icons";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -111,11 +112,13 @@ export default function Chat({ email }: { email: string }) {
             type="button"
             onClick={() => { if (vozLigada && falando) pararFala(); alternarLigado(); }}
             title={vozLigada ? "Desligar voz do assistente" : "Ligar voz do assistente"}
-            style={{ background: vozLigada ? "#2E75B6" : "#EEF2F8", color: vozLigada ? "#fff" : "#607D8B",
-              border: "1px solid " + (vozLigada ? "#2E75B6" : "#D6DEEA"), borderRadius: 20,
-              padding: "4px 12px", fontSize: 12, cursor: "pointer" }}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6,
+              background: vozLigada ? "var(--grad-azul-suave)" : "rgba(255,255,255,.7)",
+              color: vozLigada ? "#fff" : "var(--txt-2)",
+              border: "1px solid " + (vozLigada ? "transparent" : "var(--glass-borda)"), borderRadius: "var(--r-full)",
+              padding: "5px 13px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
           >
-            {vozLigada ? "🔊 Voz ligada" : "🔇 Voz desligada"}
+            {vozLigada ? <IconSom /> : <IconSomOff />} {vozLigada ? "Voz ligada" : "Voz desligada"}
           </button>
         </div>
       )}
@@ -131,27 +134,29 @@ export default function Chat({ email }: { email: string }) {
             disabled={transcrevendo}
             title={ouvindo ? "Parar e transcrever" : "Gravar e falar"}
             aria-label={ouvindo ? "Parar e transcrever" : "Gravar e falar"}
-            style={{ width: 46, flexShrink: 0, background: ouvindo ? "#C0392B" : "#EEF2F8",
-              color: ouvindo ? "#fff" : "#1F3864", border: "1px solid " + (ouvindo ? "#C0392B" : "#D6DEEA"),
-              borderRadius: 10, fontSize: 18, cursor: transcrevendo ? "wait" : "pointer", opacity: transcrevendo ? 0.6 : 1 }}
+            style={{ width: 48, flexShrink: 0, display: "grid", placeItems: "center",
+              background: ouvindo ? "var(--grad-verde)" : "rgba(255,255,255,.8)",
+              color: ouvindo ? "#fff" : "var(--elo-azul)", border: "1px solid " + (ouvindo ? "transparent" : "var(--glass-borda)"),
+              borderRadius: 12, cursor: transcrevendo ? "wait" : "pointer", opacity: transcrevendo ? 0.6 : 1,
+              boxShadow: ouvindo ? "0 6px 18px rgba(34,197,94,.4)" : "var(--sombra-sm)" }}
           >
-            {transcrevendo ? "…" : ouvindo ? "■" : "🎤"}
+            {transcrevendo ? "…" : ouvindo ? <IconStop /> : <IconMic />}
           </button>
         )}
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder={ouvindo ? "Gravando… toque em ■ para transcrever" : transcrevendo ? "Transcrevendo…" : "Pergunte, ou toque no 🎤 para falar…"}
-          style={{ flex: 1, padding: "12px 14px", border: "1px solid " + (ouvindo ? "#C0392B" : "#CBD5E1"),
-            borderRadius: 10, fontSize: 14 }}
+          placeholder={ouvindo ? "Gravando… toque no botão para transcrever" : transcrevendo ? "Transcrevendo…" : "Pergunte, ou toque no microfone para falar…"}
+          className="elo-input"
+          style={{ flex: 1 }}
         />
         <button
           type="submit"
           disabled={carregando || !input.trim()}
-          style={{ padding: "12px 20px", background: "#2E75B6", color: "#fff", border: "none",
-            borderRadius: 10, fontSize: 14, cursor: "pointer", opacity: carregando || !input.trim() ? 0.6 : 1 }}
+          className="elo-btn"
+          style={{ display: "inline-flex", alignItems: "center", gap: 7 }}
         >
-          Enviar
+          <IconEnviar /> Enviar
         </button>
       </form>
       {erroVoz && (
@@ -159,7 +164,7 @@ export default function Chat({ email }: { email: string }) {
       )}
       <p style={{ color: "#90A4AE", fontSize: 11, textAlign: "center", margin: "4px 0 0" }}>
         Logado como {email}. O assistente usa dados do funil da ELO e nunca inventa informações.
-        {suportado ? " 🎤 Ditado por voz disponível." : ""}
+        {suportado ? " Ditado por voz disponível." : ""}
       </p>
     </div>
   );
