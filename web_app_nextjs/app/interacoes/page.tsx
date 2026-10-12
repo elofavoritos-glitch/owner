@@ -29,6 +29,7 @@ export default async function Interacoes() {
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <h1 style={{ color: "#1F3864", margin: 0, fontSize: 22 }}>Interações — ELO</h1>
           <Link href="/" style={{ color: "#2E75B6", fontSize: 14, textDecoration: "none" }}>← Painel</Link>
+          <Link href="/clientes" style={{ color: "#2E75B6", fontSize: 14, textDecoration: "none" }}>🏢 Clientes</Link>
           <Link href="/assistente" style={{ color: "#2E75B6", fontSize: 14, textDecoration: "none" }}>💬 Assistente</Link>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
