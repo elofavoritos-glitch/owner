@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase-server";
 import { resumo, porEtapa, moeda, type Oportunidade } from "@/lib/metrics";
+import Link from "next/link";
 import Charts from "./charts";
 import SairButton from "./sair-button";
 
@@ -71,6 +72,13 @@ export default async function Dashboard() {
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
         <h1 style={{ color: "#1F3864", margin: 0 }}>Painel Comercial — ELO</h1>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Link
+            href="/assistente"
+            style={{ background: "#2E75B6", color: "#fff", padding: "8px 14px", borderRadius: 8,
+              fontSize: 13, textDecoration: "none", fontWeight: 600 }}
+          >
+            💬 Assistente
+          </Link>
           <span style={{ color: "#607D8B", fontSize: 13 }}>{user.email}</span>
           <SairButton />
         </div>
