@@ -78,7 +78,10 @@ alter table metas enable row level security;
 alter table atividades enable row level security;
 
 -- Helper: papel do usuário logado
-create or replace function papel_atual() returns text language sql stable as $$
+-- SECURITY DEFINER + search_path fixo: a função ignora a RLS ao consultar
+-- `perfis`, evitando recursão infinita nas próprias políticas que a chamam.
+create or replace function papel_atual() returns text
+  language sql stable security definer set search_path = public as $$
   select papel from perfis where id = auth.uid()
 $$;
 
