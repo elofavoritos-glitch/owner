@@ -1,7 +1,7 @@
 // Dashboard principal (server component). Busca oportunidades respeitando o RLS
 // (comercial vê a própria carteira; gestor vê o time) e renderiza os gráficos.
 import { redirect } from "next/navigation";
-import { supabaseServer } from "@/lib/supabase";
+import { supabaseServer } from "@/lib/supabase-server";
 import { resumo, porEtapa, moeda, type Oportunidade } from "@/lib/metrics";
 import Charts from "./charts";
 

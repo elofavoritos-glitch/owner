@@ -1,6 +1,6 @@
 // Callback do OAuth Microsoft: troca o código por sessão e redireciona ao painel.
 import { NextResponse } from "next/server";
-import { supabaseServer } from "@/lib/supabase";
+import { supabaseServer } from "@/lib/supabase-server";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
