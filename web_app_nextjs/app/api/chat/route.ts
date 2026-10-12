@@ -1,22 +1,23 @@
 // Rota do chat do assistente comercial da ELO.
-// Orquestra o Claude (Anthropic) com function-calling, expondo a inteligência
-// determinística da ELO (dossiê, score, diagnóstico) e o funil do Supabase.
+// Orquestra a Groq (API compatível com OpenAI) com function-calling, expondo a
+// inteligência determinística da ELO (dossiê, score, diagnóstico) e o funil.
 //
-// Sem ANTHROPIC_API_KEY, entra em MODO DEMONSTRAÇÃO: responde com a inteligência
+// Sem GROQ_API_KEY, entra em MODO DEMONSTRAÇÃO: responde com a inteligência
 // determinística (dossiê/score), sem conversa livre, para não quebrar o app.
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
 import { SYSTEM_PROMPT, TOOLS } from "@/lib/elo-agent";
 import {
-  montarDossie, analisarDiagnostico, calcularScore,
-  type Evidencias,
+  montarDossie, analisarDiagnostico, calcularScore, type Evidencias,
 } from "@/lib/elo-intelligence";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const MODEL = "claude-3-5-sonnet-latest";
+const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
+// Modelo configurável; default é um Llama rápido e gratuito na Groq.
+const MODEL = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
 
 type ChatMsg = { role: "user" | "assistant"; content: string };
 
@@ -73,7 +74,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ erro: "Envie ao menos uma mensagem." }, { status: 400 });
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
 
   // ---------- MODO DEMONSTRAÇÃO (sem chave) ----------
   if (!apiKey) {
@@ -81,8 +82,8 @@ export async function POST(request: Request) {
     const empresa = ultima.replace(/[?.!]/g, "").trim().slice(0, 80) || "a empresa informada";
     const dossie = montarDossie(empresa, {});
     const texto =
-      `**[Modo demonstração — sem ANTHROPIC_API_KEY configurada]**\n\n` +
-      `A conversa livre fica disponível quando a chave do Claude for adicionada na Vercel. ` +
+      `**[Modo demonstração — sem GROQ_API_KEY configurada]**\n\n` +
+      `A conversa livre fica disponível quando a chave da Groq for adicionada na Vercel. ` +
       `Por enquanto, segue o cálculo determinístico da inteligência da ELO para **${empresa}**:\n\n` +
       `- **Score:** ${dossie.score.score}/100 (prioridade ${dossie.score.prioridade})\n` +
       `- **Pendências para pontuar:** ${dossie.score.pendencias.join(", ") || "nenhuma"}\n` +
@@ -92,53 +93,66 @@ export async function POST(request: Request) {
     return NextResponse.json({ content: texto, demo: true });
   }
 
-  // ---------- MODO COMPLETO (Claude com tools) ----------
-  const anthropic = new Anthropic({ apiKey });
+  // ---------- MODO COMPLETO (Groq com tools) ----------
+  const client = new OpenAI({ apiKey, baseURL: GROQ_BASE_URL });
 
-  const messages: Anthropic.MessageParam[] = historico.map((m) => ({
-    role: m.role,
-    content: m.content,
-  }));
+  const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+    { role: "system", content: SYSTEM_PROMPT },
+    ...historico.map((m) => ({ role: m.role, content: m.content })),
+  ];
 
   try {
     // Loop de function-calling (até 5 rodadas de tools).
     for (let i = 0; i < 5; i++) {
-      const resp = await anthropic.messages.create({
+      const resp = await client.chat.completions.create({
         model: MODEL,
         max_tokens: 1500,
-        system: SYSTEM_PROMPT,
-        tools: TOOLS,
         messages,
+        tools: TOOLS,
       });
 
-      if (resp.stop_reason === "tool_use") {
-        const toolUses = resp.content.filter((b): b is Anthropic.ToolUseBlock => b.type === "tool_use");
-        messages.push({ role: "assistant", content: resp.content });
-        const results: Anthropic.ToolResultBlockParam[] = [];
-        for (const tu of toolUses) {
-          const out = await executarTool(tu.name, tu.input as Record<string, unknown>);
-          results.push({ type: "tool_result", tool_use_id: tu.id, content: out });
+      const choice = resp.choices[0];
+      const msg = choice.message;
+
+      if (msg.tool_calls && msg.tool_calls.length) {
+        messages.push(msg);
+        for (const tc of msg.tool_calls) {
+          if (tc.type !== "function") continue;
+          let args: Record<string, unknown> = {};
+          try {
+            args = JSON.parse(tc.function.arguments || "{}");
+          } catch {
+            args = {};
+          }
+          const out = await executarTool(tc.function.name, args);
+          messages.push({ role: "tool", tool_call_id: tc.id, content: out });
         }
-        messages.push({ role: "user", content: results });
         continue;
       }
 
       // Resposta final em texto.
-      const texto = resp.content
-        .filter((b): b is Anthropic.TextBlock => b.type === "text")
-        .map((b) => b.text)
-        .join("\n")
-        .trim();
+      const texto = (msg.content ?? "").trim();
       return NextResponse.json({ content: texto || "(sem resposta)" });
     }
 
     return NextResponse.json({ content: "Não consegui concluir a análise. Tente reformular a pergunta." });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error("Erro no chat:", msg);
-    return NextResponse.json(
-      { erro: "Falha ao falar com o assistente. Verifique a ANTHROPIC_API_KEY.", detalhe: msg },
-      { status: 500 },
-    );
+    // Extrai o máximo de detalhe do erro da Groq (APIError compatível OpenAI).
+    let status: number | undefined;
+    let detalhe = e instanceof Error ? e.message : String(e);
+    if (e instanceof OpenAI.APIError) {
+      status = e.status;
+      detalhe = JSON.stringify(e.error ?? e.message);
+    }
+
+    let erro = "Falha ao falar com o assistente.";
+    if (status === 401) erro = "GROQ_API_KEY inválida ou ausente.";
+    else if (status === 403) erro = "Sem permissão na conta Groq.";
+    else if (status === 404) erro = `Modelo '${MODEL}' indisponível. Ajuste GROQ_MODEL.`;
+    else if (status === 429) erro = "Limite de requisições atingido na Groq. Tente em instantes.";
+    else if (status && status >= 500) erro = "Instabilidade na API da Groq. Tente novamente.";
+
+    console.error("Erro no chat:", status, detalhe);
+    return NextResponse.json({ erro, status: status ?? null, detalhe }, { status: 500 });
   }
 }
