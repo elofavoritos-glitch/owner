@@ -20,6 +20,8 @@ Todo score, diagnóstico e recomendação giram em torno desses serviços.
 4. Recomenda serviços (armazenagem, transporte ou solução integrada).
 5. Monta dossiê pré-reunião com a próxima melhor ação.
 6. Consulta o funil de oportunidades real da ELO (banco de dados) quando perguntado sobre clientes, pipeline, valores ou etapas.
+7. Responde "já falamos com essa empresa? qual o estágio do relacionamento?" consultando o histórico de interações registrado (ligações, e-mails, reuniões).
+8. Registra interações no histórico quando o comercial relatar um contato (ex.: "liguei para a empresa X", "tivemos reunião com Y").
 
 ## Regras OBRIGATÓRIAS (seguir sempre)
 1. **Nunca invente** CNPJ, contato, volume, preço, operação, importação ou histórico. Sem evidência, o critério fica pendente e com nota zero.
@@ -32,6 +34,8 @@ Todo score, diagnóstico e recomendação giram em torno desses serviços.
 ## Como usar as ferramentas
 - Para avaliar uma empresa específica, prefira **montar_dossie** (consolida diagnóstico + score + próxima ação). Peça ao comercial as respostas do diagnóstico quando não as tiver — não presuma.
 - Use **consultar_oportunidades** para perguntas sobre o funil/pipeline, clientes cadastrados, valores e etapas.
+- Use **consultar_relacionamento** para saber se a ELO já abordou uma empresa e em qual estágio está (nunca abordada, contatado sem resposta, esfriado, ativo). Útil antes de uma abordagem.
+- Use **registrar_interacao** quando o comercial relatar um contato ocorrido (ligação, e-mail, reunião, etc.). Extraia empresa, canal, direção (quem iniciou: 'enviado' = nós contatamos; 'recebido' = o cliente respondeu/procurou), assunto e observação. Antes de gravar, CONFIRME em uma frase o que entendeu; só registre dados que o comercial informou — nunca invente empresa, data ou conteúdo. Depois de registrar, confirme o que foi salvo.
 - Use **calcular_score** quando já houver evidências estruturadas, ou **analisar_diagnostico** para transformar respostas de diagnóstico em evidências e recomendações.
 - Sempre explique o resultado em linguagem natural para o comercial; não despeje apenas JSON.
 
@@ -91,6 +95,49 @@ export const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           },
         },
         required: ["respostas"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "registrar_interacao",
+      description:
+        "Registra uma interação ocorrida com uma empresa no histórico de relacionamento (ligação, e-mail, reunião, etc.). Use quando o comercial relatar um contato. Não invente dados; registre apenas o que foi informado.",
+      parameters: {
+        type: "object",
+        properties: {
+          empresa: { type: "string", description: "Nome da empresa contatada." },
+          canal: {
+            type: "string",
+            enum: ["email", "ligacao", "reuniao", "whatsapp", "evento", "outro"],
+            description: "Meio do contato.",
+          },
+          direcao: {
+            type: "string",
+            enum: ["enviado", "recebido"],
+            description: "'enviado' = a ELO contatou; 'recebido' = o cliente respondeu/procurou.",
+          },
+          assunto: { type: "string", description: "Assunto curto do contato." },
+          observacao: { type: "string", description: "Detalhes/relato do contato." },
+          data_interacao: { type: "string", description: "Data no formato AAAA-MM-DD. Se não informada, usa hoje." },
+        },
+        required: ["empresa"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "consultar_relacionamento",
+      description:
+        "Verifica o histórico de relacionamento da ELO com uma empresa (ligações, e-mails, reuniões registrados) e classifica o estágio: 'nunca abordada', 'contatado sem resposta', 'esfriado (reativar)' ou 'ativo'. Use antes de uma abordagem para saber se já houve contato e qual a próxima ação.",
+      parameters: {
+        type: "object",
+        properties: {
+          empresa: { type: "string", description: "Nome (ou parte do nome) da empresa a investigar." },
+        },
+        required: ["empresa"],
       },
     },
   },

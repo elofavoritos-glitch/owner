@@ -1,5 +1,6 @@
 "use client";
 import { useRef, useState, useEffect } from "react";
+import { useDitado } from "../use-ditado";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
@@ -22,6 +23,7 @@ export default function Chat({ email }: { email: string }) {
   const [input, setInput] = useState("");
   const [carregando, setCarregando] = useState(false);
   const fim = useRef<HTMLDivElement>(null);
+  const { suportado, ouvindo, erro: erroVoz, alternar } = useDitado(setInput);
 
   useEffect(() => {
     fim.current?.scrollIntoView({ behavior: "smooth" });
@@ -102,11 +104,25 @@ export default function Chat({ email }: { email: string }) {
         onSubmit={(e) => { e.preventDefault(); enviar(input); }}
         style={{ display: "flex", gap: 8, padding: "10px 4px", borderTop: "1px solid #E3E8F0" }}
       >
+        {suportado && (
+          <button
+            type="button"
+            onClick={alternar}
+            title={ouvindo ? "Parar de ouvir" : "Falar"}
+            aria-label={ouvindo ? "Parar de ouvir" : "Falar"}
+            style={{ width: 46, flexShrink: 0, background: ouvindo ? "#C0392B" : "#EEF2F8",
+              color: ouvindo ? "#fff" : "#1F3864", border: "1px solid " + (ouvindo ? "#C0392B" : "#D6DEEA"),
+              borderRadius: 10, fontSize: 18, cursor: "pointer" }}
+          >
+            {ouvindo ? "■" : "🎤"}
+          </button>
+        )}
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Pergunte sobre um cliente, o funil, ou peça um dossiê…"
-          style={{ flex: 1, padding: "12px 14px", border: "1px solid #CBD5E1", borderRadius: 10, fontSize: 14 }}
+          placeholder={ouvindo ? "Ouvindo… pode falar" : "Pergunte, ou toque no 🎤 para falar…"}
+          style={{ flex: 1, padding: "12px 14px", border: "1px solid " + (ouvindo ? "#C0392B" : "#CBD5E1"),
+            borderRadius: 10, fontSize: 14 }}
         />
         <button
           type="submit"
@@ -117,8 +133,12 @@ export default function Chat({ email }: { email: string }) {
           Enviar
         </button>
       </form>
+      {erroVoz && (
+        <p style={{ color: "#C0392B", fontSize: 12, textAlign: "center", margin: "4px 0 0" }}>{erroVoz}</p>
+      )}
       <p style={{ color: "#90A4AE", fontSize: 11, textAlign: "center", margin: "4px 0 0" }}>
         Logado como {email}. O assistente usa dados do funil da ELO e nunca inventa informações.
+        {suportado ? " 🎤 Ditado por voz disponível." : ""}
       </p>
     </div>
   );

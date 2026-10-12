@@ -6,6 +6,7 @@ import { resumo, porEtapa, moeda, type Oportunidade } from "@/lib/metrics";
 import Link from "next/link";
 import Charts from "./charts";
 import SairButton from "./sair-button";
+import AjudaButton from "./ajuda-button";
 
 // A página depende de cookies/sessão: precisa ser renderizada dinamicamente.
 export const dynamic = "force-dynamic";
@@ -73,12 +74,38 @@ export default async function Dashboard() {
         <h1 style={{ color: "#1F3864", margin: 0 }}>Painel Comercial — ELO</h1>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <Link
+            href="/clientes"
+            style={{ color: "#2E75B6", padding: "8px 10px", fontSize: 13, textDecoration: "none" }}
+          >
+            🏢 Clientes
+          </Link>
+          <Link
+            href="/interacoes"
+            style={{ color: "#2E75B6", padding: "8px 10px", fontSize: 13, textDecoration: "none" }}
+          >
+            📇 Interações
+          </Link>
+          <Link
             href="/assistente"
             style={{ background: "#2E75B6", color: "#fff", padding: "8px 14px", borderRadius: 8,
               fontSize: 13, textDecoration: "none", fontWeight: 600 }}
           >
             💬 Assistente
           </Link>
+          <AjudaButton titulo="Como ler o Painel">
+            <p>Os indicadores consideram as oportunidades que você tem permissão de ver
+            (comercial: sua carteira; gestor: o time todo).</p>
+            <ul>
+              <li><strong>Pipeline potencial</strong> — soma do valor de todas as oportunidades.</li>
+              <li><strong>Previsão ponderada</strong> — soma do valor multiplicado pela probabilidade de cada
+              oportunidade (expectativa mais realista de receita).</li>
+              <li><strong>Oportunidades abertas</strong> — ainda em andamento (nem ganhas, nem perdidas).</li>
+              <li><strong>Taxa de conversão</strong> — ganhas ÷ (ganhas + perdidas).</li>
+              <li><strong>Em risco</strong> — abertas sem próxima ação definida ou com ação atrasada.</li>
+            </ul>
+            <p>Use o <strong>📇 Interações</strong> para registrar contatos e o
+            <strong> 💬 Assistente</strong> para consultar e analisar clientes em conversa (inclusive por voz).</p>
+          </AjudaButton>
           <span style={{ color: "#607D8B", fontSize: 13 }}>{user.email}</span>
           <SairButton />
         </div>

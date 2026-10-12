@@ -9,7 +9,8 @@ import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
 import { SYSTEM_PROMPT, TOOLS } from "@/lib/elo-agent";
 import {
-  montarDossie, analisarDiagnostico, calcularScore, type Evidencias,
+  montarDossie, analisarDiagnostico, calcularScore, classificarRelacionamento,
+  type Evidencias, type Interacao,
 } from "@/lib/elo-intelligence";
 
 export const dynamic = "force-dynamic";
@@ -22,9 +23,38 @@ const MODEL = process.env.GROQ_MODEL || "openai/gpt-oss-20b";
 
 type ChatMsg = { role: "user" | "assistant"; content: string };
 
+const CANAIS_VALIDOS = ["email", "ligacao", "reuniao", "whatsapp", "evento", "outro"];
+const DIRECOES_VALIDAS = ["enviado", "recebido"];
+
 // Executa uma ferramenta chamada pelo modelo. Retorna texto (JSON) do resultado.
-async function executarTool(nome: string, input: Record<string, unknown>): Promise<string> {
+// Recebe o usuário logado para gravações (nunca confia no LLM para o responsável).
+async function executarTool(
+  nome: string,
+  input: Record<string, unknown>,
+  user: { id: string; email?: string },
+): Promise<string> {
   try {
+    if (nome === "registrar_interacao") {
+      const empresa = String(input.empresa ?? "").trim();
+      if (!empresa) return JSON.stringify({ erro: "Informe a empresa para registrar a interação." });
+      const canal = CANAIS_VALIDOS.includes(String(input.canal)) ? String(input.canal) : "outro";
+      const direcao = DIRECOES_VALIDAS.includes(String(input.direcao)) ? String(input.direcao) : "enviado";
+      const supabase = supabaseServer();
+      const { data: perfil } = await supabase.from("perfis").select("nome").eq("id", user.id).maybeSingle();
+      const registro = {
+        empresa,
+        responsavel_id: user.id,
+        responsavel_nome: perfil?.nome || user.email || null,
+        canal,
+        direcao,
+        assunto: input.assunto ? String(input.assunto).trim() : null,
+        data_interacao: String(input.data_interacao || new Date().toISOString().slice(0, 10)),
+        observacao: input.observacao ? String(input.observacao).trim() : null,
+      };
+      const { data, error } = await supabase.from("interacoes").insert(registro).select().single();
+      if (error) return JSON.stringify({ erro: error.message });
+      return JSON.stringify({ ok: true, registrado: data });
+    }
     if (nome === "montar_dossie") {
       const dossie = montarDossie(String(input.empresa ?? ""), {
         respostas_diagnostico: input.respostas_diagnostico as Record<string, unknown> | undefined,
@@ -37,6 +67,19 @@ async function executarTool(nome: string, input: Record<string, unknown>): Promi
     }
     if (nome === "calcular_score") {
       return JSON.stringify(calcularScore(String(input.empresa ?? ""), (input.evidencias as Evidencias) ?? {}));
+    }
+    if (nome === "consultar_relacionamento") {
+      const empresa = String(input.empresa ?? "").trim();
+      if (!empresa) return JSON.stringify({ erro: "Informe a empresa." });
+      const supabase = supabaseServer();
+      const { data, error } = await supabase
+        .from("interacoes")
+        .select("canal,direcao,assunto,data_interacao,responsavel_nome")
+        .ilike("empresa", `%${empresa}%`)
+        .order("data_interacao", { ascending: false })
+        .limit(200);
+      if (error) return JSON.stringify({ erro: error.message });
+      return JSON.stringify(classificarRelacionamento(empresa, (data ?? []) as Interacao[]));
     }
     if (nome === "consultar_oportunidades") {
       const supabase = supabaseServer();
@@ -125,7 +168,7 @@ export async function POST(request: Request) {
           } catch {
             args = {};
           }
-          const out = await executarTool(tc.function.name, args);
+          const out = await executarTool(tc.function.name, args, { id: user.id, email: user.email ?? undefined });
           messages.push({ role: "tool", tool_call_id: tc.id, content: out });
         }
         continue;
