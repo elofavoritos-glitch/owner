@@ -1,6 +1,7 @@
 // API de documentos dos clientes: lista, faz upload (Storage) e exclui.
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
+import { erroGenerico } from "@/lib/seguranca";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -37,7 +38,10 @@ export async function GET(request: Request) {
   if (clienteId) q = q.eq("cliente_id", clienteId);
 
   const { data, error } = await q;
-  if (error) return NextResponse.json({ erro: error.message }, { status: 500 });
+  if (error) {
+    console.error("GET /api/documentos:", error.message);
+    return NextResponse.json({ erro: erroGenerico("listar os documentos") }, { status: 500 });
+  }
   return NextResponse.json({ documentos: data ?? [] });
 }
 
@@ -57,6 +61,18 @@ export async function POST(request: Request) {
   if (!(file instanceof File)) return NextResponse.json({ erro: "Nenhum arquivo enviado." }, { status: 400 });
   if (!clienteId || !empresa) return NextResponse.json({ erro: "Cliente não identificado." }, { status: 400 });
   if (file.size > MAX_BYTES) return NextResponse.json({ erro: "Arquivo acima de 15 MB." }, { status: 400 });
+  if (file.size === 0) return NextResponse.json({ erro: "Arquivo vazio." }, { status: 400 });
+
+  // Aceita apenas extensões de documentos/planilhas comuns.
+  const EXT_OK = [".pdf", ".xml", ".xlsx", ".xls", ".csv", ".png", ".jpg", ".jpeg", ".doc", ".docx", ".txt"];
+  const nomeLower = file.name.toLowerCase();
+  if (!EXT_OK.some((e) => nomeLower.endsWith(e))) {
+    return NextResponse.json({ erro: "Tipo de arquivo não permitido." }, { status: 400 });
+  }
+
+  // Confirma que o cliente existe e é visível ao usuário (RLS) antes de anexar.
+  const { data: cli } = await supabase.from("clientes").select("id").eq("id", clienteId).maybeSingle();
+  if (!cli) return NextResponse.json({ erro: "Cliente não encontrado." }, { status: 404 });
 
   const caminho = `${clienteId}/${crypto.randomUUID()}-${sanitizar(file.name)}`;
   const bytes = new Uint8Array(await file.arrayBuffer());
@@ -86,7 +102,8 @@ export async function POST(request: Request) {
   if (error) {
     // rollback do arquivo se o metadado falhar
     await supabase.storage.from(BUCKET).remove([caminho]);
-    return NextResponse.json({ erro: error.message }, { status: 500 });
+    console.error("POST /api/documentos:", error.message);
+    return NextResponse.json({ erro: erroGenerico("anexar o documento") }, { status: 500 });
   }
   return NextResponse.json({ documento: data }, { status: 201 });
 }
@@ -101,7 +118,10 @@ export async function DELETE(request: Request) {
 
   const { data: doc } = await supabase.from("documentos").select("caminho").eq("id", id).maybeSingle();
   const { error } = await supabase.from("documentos").delete().eq("id", id);
-  if (error) return NextResponse.json({ erro: error.message }, { status: 500 });
+  if (error) {
+    console.error("DELETE /api/documentos:", error.message);
+    return NextResponse.json({ erro: erroGenerico("excluir o documento") }, { status: 500 });
+  }
   if (doc?.caminho) await supabase.storage.from(BUCKET).remove([doc.caminho]);
   return NextResponse.json({ ok: true });
 }

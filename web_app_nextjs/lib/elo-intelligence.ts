@@ -331,7 +331,7 @@ export function classificarRelacionamento(
     .map((i) => new Date(i.data_interacao))
     .filter((d) => !Number.isNaN(d.getTime()));
   const ultimo = datas.length ? new Date(Math.max(...datas.map((d) => d.getTime()))) : null;
-  const dias = ultimo ? Math.floor((Date.now() - ultimo.getTime()) / 86_400_000) : null;
+  const dias = ultimo ? Math.max(0, Math.floor((Date.now() - ultimo.getTime()) / 86_400_000)) : null;
   const houveResposta = interacoes.some((i) => i.direcao === "recebido");
 
   const responsaveis = Array.from(
