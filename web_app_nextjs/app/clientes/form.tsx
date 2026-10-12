@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Documentos from "./documentos";
+import ImportarPlanilha from "./importar";
 
 type Cliente = {
   id: string;
@@ -85,7 +86,11 @@ export default function ClientesForm() {
   const linha: React.CSSProperties = { display: "flex", gap: 10, marginTop: 12 };
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "minmax(340px, 440px) 1fr", gap: 20, alignItems: "start" }}>
+    <div>
+    <div style={{ marginBottom: 4 }}>
+      <ImportarPlanilha aoImportar={() => carregar(busca)} />
+    </div>
+    <div style={{ display: "grid", gridTemplateColumns: "minmax(340px, 440px) 1fr", gap: 20, alignItems: "start", marginTop: 16 }}>
       {/* Formulário */}
       <form onSubmit={salvar} style={card}>
         <h2 style={{ color: "#1F3864", fontSize: 16, marginTop: 0 }}>Novo cliente</h2>
@@ -204,6 +209,7 @@ export default function ClientesForm() {
           </div>
         )}
       </div>
+    </div>
     </div>
   );
 }
