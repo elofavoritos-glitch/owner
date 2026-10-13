@@ -151,6 +151,35 @@ function chaveCache(local: string): string {
     .replace(/\s+/g, " ");
 }
 
+// Distâncias rodoviárias REAIS (km) das principais rotas da ELO. Usadas no
+// fallback quando o ORS está indisponível — números confiáveis em vez de
+// estimativa por linha reta. Chave = "cidadeA|cidadeB" em ordem alfabética.
+// Fontes: rotamapas/distanciaentre (distância por rodovia).
+const DISTANCIAS_REAIS: Record<string, number> = {
+  "curitiba|itajai": 213,
+  "itajai|sao paulo": 650,
+  "itajai|porto alegre": 532,
+  "florianopolis|itajai": 95,
+  "itajai|joinville": 86,
+  "blumenau|itajai": 52,
+  "balneario camboriu|itajai": 20,
+  "itajai|navegantes": 10,
+  "chapeco|itajai": 490,
+  "caxias do sul|itajai": 430,
+  "curitiba|sao paulo": 405,
+  "blumenau|joinville": 110,
+  "blumenau|florianopolis": 140,
+  "florianopolis|joinville": 180,
+  "curitiba|joinville": 130,
+  "itajai|rio de janeiro": 1100,
+  "itajai|londrina": 560,
+  "itajai|maringa": 640,
+};
+
+function chaveDist(a: string, b: string): string {
+  return [chaveCache(a), chaveCache(b)].sort().join("|");
+}
+
 // fetch com timeout para não pendurar a requisição.
 async function fetchComTimeout(url: string, opts: RequestInit = {}, ms = 5000): Promise<Response> {
   const ctrl = new AbortController();
@@ -188,12 +217,12 @@ export async function calcularRota(origem: string, destino: string): Promise<Rec
   if (!apiKey) return { erro: "Rotas indisponíveis (chave de geolocalização não configurada)." };
   if (!origem?.trim() || !destino?.trim()) return { erro: "Informe origem e destino." };
 
+  const fmtTempo = (horas: number) =>
+    `${Math.floor(horas)}h${String(Math.round((horas % 1) * 60)).padStart(2, "0")}`;
+
   const [o, d] = await Promise.all([geocodar(origem, apiKey), geocodar(destino, apiKey)]);
   if (!o) return { erro: `Origem "${origem}" não localizada.` };
   if (!d) return { erro: `Destino "${destino}" não localizado.` };
-
-  const fmtTempo = (horas: number) =>
-    `${Math.floor(horas)}h${String(Math.round((horas % 1) * 60)).padStart(2, "0")}`;
 
   try {
     // driving-car é bem mais rápido no ORS que driving-hgv; para distância/tempo
@@ -223,8 +252,21 @@ export async function calcularRota(origem: string, destino: string): Promise<Rec
     // cai para o fallback abaixo
   }
 
-  // Fallback: estimativa por distância em linha reta (Haversine) × fator de
-  // estrada, quando o ORS está lento/indisponível. Melhor que falhar.
+  // Fallback 1: tabela de distâncias rodoviárias REAIS das rotas da ELO.
+  const kmReal = DISTANCIAS_REAIS[chaveDist(origem, destino)];
+  if (kmReal) {
+    return {
+      origem, destino,
+      distancia_km: kmReal,
+      tempo_estimado: fmtTempo(kmReal / 65),
+      modal: "caminhão (estimativa)",
+      fonte: "distância rodoviária de referência (ELO)",
+      observacao: "Serviço de rotas indisponível; distância de referência, tempo sem trânsito.",
+    };
+  }
+
+  // Fallback 2: estimativa por distância em linha reta (Haversine) × fator de
+  // estrada, quando a rota não está na tabela. Melhor que falhar.
   const [lon1, lat1] = o, [lon2, lat2] = d;
   const toRad = (x: number) => (x * Math.PI) / 180;
   const R = 6371;
