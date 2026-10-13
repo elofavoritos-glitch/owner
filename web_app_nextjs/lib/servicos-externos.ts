@@ -173,6 +173,7 @@ async function geocodar(local: string, apiKey: string): Promise<[number, number]
         `&text=${encodeURIComponent(local)}&boundary.country=BR&size=1`,
       { cache: "no-store" },
     );
+    if (!r.ok) return null;
     const d = (await r.json()) as { features?: Array<{ geometry: { coordinates: [number, number] } }> };
     const c = d.features?.[0]?.geometry?.coordinates;
     return c ? [c[0], c[1]] : null;
@@ -202,6 +203,8 @@ export async function calcularRota(origem: string, destino: string): Promise<Rec
       headers: { Authorization: apiKey, "Content-Type": "application/json" },
       body: JSON.stringify({ coordinates: [o, d] }),
     }, 5000);
+    // Se o ORS respondeu erro (502/429/etc.), cai direto no fallback — não espera.
+    if (!r.ok) throw new Error(`ORS ${r.status}`);
     const data = (await r.json()) as { routes?: Array<{ summary: { distance: number; duration: number } }> };
     const resumo = data.routes?.[0]?.summary;
     if (resumo) {
