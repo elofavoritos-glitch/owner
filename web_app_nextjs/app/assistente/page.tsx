@@ -43,6 +43,8 @@ export default async function Assistente() {
               <li>Montar dossiê de um cliente (score, serviços e próxima ação): <em>&quot;monte o dossiê da Transportadora Horizonte&quot;</em></li>
               <li>Ver relacionamento: <em>&quot;já falamos com a AgroInsumos?&quot;</em></li>
               <li>Registrar um contato: <em>&quot;registra: liguei pra MetalForte, pediram cotação&quot;</em></li>
+              <li>Gerar proposta em PDF: <em>&quot;faz uma proposta pra Padaria Central&quot;</em></li>
+              <li>Apoio logístico: <em>clima de uma cidade, distância/tempo de rotas de caminhão e dados dos principais aeroportos do Brasil</em></li>
             </ul>
             <p><strong>Falar em vez de digitar:</strong> toque no microfone, fale e toque de novo para
             parar — a transcrição aparece em 1-2 segundos. Funciona em qualquer navegador, incluindo o

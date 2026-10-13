@@ -9,8 +9,9 @@ type Msg = { role: "user" | "assistant"; content: string };
 const SUGESTOES = [
   "Quais oportunidades estão em negociação?",
   "Monte o dossiê da Transportadora Horizonte",
-  "Qual o pipeline potencial total?",
-  "Como avalio o potencial de um novo cliente?",
+  "Como está o tempo em Itajaí amanhã?",
+  "Distância de Itajaí até Curitiba de caminhão",
+  "Qual o aeroporto que atende Navegantes?",
 ];
 
 export default function Chat({ email }: { email: string }) {

@@ -14,6 +14,7 @@ import {
 } from "@/lib/elo-intelligence";
 import { escaparBusca, validarData, texto } from "@/lib/seguranca";
 import { gerarPropostaPDF, type ItemProposta } from "@/lib/proposta-pdf";
+import { consultarClima, consultarAeroportos, calcularRota } from "@/lib/servicos-externos";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -110,6 +111,15 @@ async function executarTool(
       } catch (e) {
         return JSON.stringify({ erro: e instanceof Error ? e.message : "Falha ao gerar o PDF." });
       }
+    }
+    if (nome === "consultar_clima") {
+      return JSON.stringify(await consultarClima(String(input.cidade ?? ""), Number(input.dias) || 3));
+    }
+    if (nome === "consultar_aeroportos") {
+      return JSON.stringify(consultarAeroportos(input.busca ? String(input.busca) : undefined));
+    }
+    if (nome === "calcular_rota") {
+      return JSON.stringify(await calcularRota(String(input.origem ?? ""), String(input.destino ?? "")));
     }
     if (nome === "montar_dossie") {
       const dossie = montarDossie(String(input.empresa ?? ""), {
