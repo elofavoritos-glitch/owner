@@ -116,9 +116,59 @@ export function consultarAeroportos(busca?: string): Record<string, unknown> {
 
 // ===================== ROTAS (OpenRouteService) =====================
 
-async function geocodar(local: string, apiKey: string): Promise<[number, number] | null> {
+// Cache de coordenadas [lon, lat] das cidades mais usadas pela ELO.
+// Evita a chamada de geocoding (economiza ~1-2 idas ao servidor por rota).
+const COORDS_CACHE: Record<string, [number, number]> = {
+  "itajai": [-48.66194, -26.90778],
+  "navegantes": [-48.65, -26.8986],
+  "balneario camboriu": [-48.6306, -26.9906],
+  "blumenau": [-49.0661, -26.9194],
+  "joinville": [-48.8456, -26.3045],
+  "florianopolis": [-48.5482, -27.5969],
+  "curitiba": [-49.2733, -25.4284],
+  "sao paulo": [-46.6333, -23.5505],
+  "campinas": [-47.0608, -22.9056],
+  "santos": [-46.3336, -23.9608],
+  "porto alegre": [-51.2177, -30.0346],
+  "rio de janeiro": [-43.1729, -22.9068],
+  "belo horizonte": [-43.9378, -19.9208],
+  "chapeco": [-52.6186, -27.1004],
+  "caxias do sul": [-51.1794, -29.1678],
+  "londrina": [-51.1628, -23.3045],
+  "maringa": [-51.9386, -23.4253],
+  "itajai sc": [-48.66194, -26.90778],
+};
+
+// Normaliza o nome para a chave do cache: remove UF, acentos, pontuação.
+function chaveCache(local: string): string {
+  return String(local)
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[,/-].*$/, "")           // corta tudo após vírgula/barra/traço (ex.: "Itajaí, SC" -> "itajai")
+    .replace(/\s*\(.*\)\s*/g, "")
+    .replace(/[^a-z\s]/g, "")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+// fetch com timeout para não pendurar a requisição.
+async function fetchComTimeout(url: string, opts: RequestInit = {}, ms = 5000): Promise<Response> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
   try {
-    const r = await fetch(
+    return await fetch(url, { ...opts, signal: ctrl.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+async function geocodar(local: string, apiKey: string): Promise<[number, number] | null> {
+  // 1) tenta o cache (instantâneo, sem rede)
+  const cacheado = COORDS_CACHE[chaveCache(local)];
+  if (cacheado) return cacheado;
+  // 2) senão, geocoding via ORS (com timeout)
+  try {
+    const r = await fetchComTimeout(
       `https://api.openrouteservice.org/geocode/search?api_key=${apiKey}` +
         `&text=${encodeURIComponent(local)}&boundary.country=BR&size=1`,
       { cache: "no-store" },
@@ -141,29 +191,51 @@ export async function calcularRota(origem: string, destino: string): Promise<Rec
   if (!o) return { erro: `Origem "${origem}" não localizada.` };
   if (!d) return { erro: `Destino "${destino}" não localizado.` };
 
+  const fmtTempo = (horas: number) =>
+    `${Math.floor(horas)}h${String(Math.round((horas % 1) * 60)).padStart(2, "0")}`;
+
   try {
-    const r = await fetch("https://api.openrouteservice.org/v2/directions/driving-hgv", {
+    // driving-car é bem mais rápido no ORS que driving-hgv; para distância/tempo
+    // estimado a diferença é pequena. Aplicamos um fator ao tempo p/ simular caminhão.
+    const r = await fetchComTimeout("https://api.openrouteservice.org/v2/directions/driving-car", {
       method: "POST",
       headers: { Authorization: apiKey, "Content-Type": "application/json" },
       body: JSON.stringify({ coordinates: [o, d] }),
-    });
-    const data = (await r.json()) as {
-      routes?: Array<{ summary: { distance: number; duration: number } }>;
-      error?: { message?: string };
-    };
+    }, 5000);
+    const data = (await r.json()) as { routes?: Array<{ summary: { distance: number; duration: number } }> };
     const resumo = data.routes?.[0]?.summary;
-    if (!resumo) return { erro: "Rota não encontrada para o trajeto informado." };
-    const km = resumo.distance / 1000;
-    const horas = resumo.duration / 3600;
-    return {
-      origem, destino,
-      distancia_km: Math.round(km),
-      tempo_estimado: `${Math.floor(horas)}h${String(Math.round((horas % 1) * 60)).padStart(2, "0")}`,
-      modal: "veículo pesado (caminhão)",
-      fonte: "OpenRouteService",
-      observacao: "Tempo estimado sem considerar trânsito em tempo real nem paradas.",
-    };
+    if (resumo) {
+      const km = resumo.distance / 1000;
+      const horas = (resumo.duration / 3600) * 1.15; // caminhão ~15% mais lento que carro
+      return {
+        origem, destino,
+        distancia_km: Math.round(km),
+        tempo_estimado: fmtTempo(horas),
+        modal: "caminhão (estimativa)",
+        fonte: "OpenRouteService",
+        observacao: "Tempo estimado para caminhão, sem considerar trânsito em tempo real nem paradas.",
+      };
+    }
   } catch {
-    return { erro: "Falha ao calcular a rota." };
+    // cai para o fallback abaixo
   }
+
+  // Fallback: estimativa por distância em linha reta (Haversine) × fator de
+  // estrada, quando o ORS está lento/indisponível. Melhor que falhar.
+  const [lon1, lat1] = o, [lon2, lat2] = d;
+  const toRad = (x: number) => (x * Math.PI) / 180;
+  const R = 6371;
+  const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  const retaKm = 2 * R * Math.asin(Math.sqrt(a));
+  const kmEstrada = retaKm * 1.3;        // estradas ~30% maiores que a linha reta
+  const horas = kmEstrada / 65;          // ~65 km/h média de caminhão em estrada
+  return {
+    origem, destino,
+    distancia_km: Math.round(kmEstrada),
+    tempo_estimado: fmtTempo(horas),
+    modal: "caminhão (estimativa aproximada)",
+    fonte: "estimativa (serviço de rotas indisponível no momento)",
+    observacao: "Distância e tempo aproximados por cálculo direto; confirme em um roteirizador para precisão.",
+  };
 }
