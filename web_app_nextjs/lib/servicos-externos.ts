@@ -292,6 +292,37 @@ export async function calcularRota(origem: string, destino: string): Promise<Rec
 
 const LOGCOMEX_URL = "https://api-prd-ncm-intel.logcomex.io/details";
 
+// GET com corpo via módulo https nativo (o fetch do Node bloqueia body em GET).
+function getComBody(
+  urlStr: string,
+  body: string,
+  headers: Record<string, string>,
+  timeoutMs = 12000,
+): Promise<{ status: number; texto: string }> {
+  // import dinâmico evita incluir no bundle do cliente (só roda no servidor)
+  return import("node:https").then((https) => new Promise((resolve, reject) => {
+    const u = new URL(urlStr);
+    const req = https.request(
+      {
+        hostname: u.hostname,
+        path: u.pathname + u.search,
+        method: "GET",
+        headers: { ...headers, "Content-Length": Buffer.byteLength(body) },
+        timeout: timeoutMs,
+      },
+      (res) => {
+        let dados = "";
+        res.on("data", (c) => (dados += c));
+        res.on("end", () => resolve({ status: res.statusCode ?? 0, texto: dados }));
+      },
+    );
+    req.on("error", reject);
+    req.on("timeout", () => { req.destroy(); reject(new Error("timeout")); });
+    req.write(body);
+    req.end();
+  }));
+}
+
 // period: AAAAMM (ex.: 202402). Aceita uma lista de meses.
 export async function consultarComex(
   ncm: string,
@@ -325,17 +356,17 @@ export async function consultarComex(
   };
 
   try {
-    const r = await fetchComTimeout(LOGCOMEX_URL, {
-      method: "GET",
-      headers: { "x-api-key": apiKey, "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+    // A API espera GET COM body (incomum). O fetch do Node proíbe body em GET
+    // ("Request with GET method cannot have body"), então usamos o módulo https.
+    const { status, texto } = await getComBody(LOGCOMEX_URL, JSON.stringify(body), {
+      "x-api-key": apiKey,
+      "Content-Type": "application/json",
     }, 12000);
-    if (!r.ok) {
-      const txt = await r.text();
-      console.error("Logcomex:", r.status, txt.slice(0, 200));
-      return { erro: `Falha na consulta Logcomex (HTTP ${r.status}).` };
+    if (status < 200 || status >= 300) {
+      console.error("Logcomex:", status, texto.slice(0, 200));
+      return { erro: `Falha na consulta Logcomex (HTTP ${status}).` };
     }
-    const data = (await r.json()) as { data?: unknown[]; records?: unknown[]; result?: unknown[] };
+    const data = JSON.parse(texto) as { data?: unknown[]; records?: unknown[]; result?: unknown[] };
     const registros = (data.data || data.records || data.result || []) as Array<Record<string, unknown>>;
     // Resume os importadores (potenciais clientes) do produto.
     const importadores = registros.slice(0, limite).map((x) => ({
