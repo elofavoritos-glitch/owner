@@ -329,7 +329,11 @@ export async function consultarComex(
   periodos?: number[],
   limite = 30,
 ): Promise<Record<string, unknown>> {
-  const apiKey = (process.env.ELO_LOGCOMEX_API_KEY || "").replace(/^\s*ELO_LOGCOMEX_API_KEY\s*=\s*/, "").trim();
+  // Robustez: remove um eventual prefixo "ELO_LOGCOMEX_API_KEY=" (com ou sem
+  // espaços) que às vezes acaba colado no valor da env var por engano.
+  const apiKey = (process.env.ELO_LOGCOMEX_API_KEY || "")
+    .replace(/^\s*ELO_LOGCOMEX_API_KEY\s*=\s*/i, "")
+    .trim();
   if (!apiKey) return { erro: "Consulta de comércio exterior indisponível (chave Logcomex não configurada)." };
 
   const ncmLimpo = String(ncm).replace(/\D/g, "");
