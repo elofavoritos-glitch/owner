@@ -284,3 +284,76 @@ export async function calcularRota(origem: string, destino: string): Promise<Rec
     observacao: "Distância e tempo aproximados por cálculo direto; confirme em um roteirizador para precisão.",
   };
 }
+
+// ===================== LOGCOMEX — NCM Intel (comércio exterior) =====================
+// Consulta importações por NCM (produto) via API NCM Intel da Logcomex.
+// Retorna os principais importadores (potenciais clientes) de um produto.
+// Requer ELO_LOGCOMEX_API_KEY (header x-api-key). API privada/paga da ELO.
+
+const LOGCOMEX_URL = "https://api-prd-ncm-intel.logcomex.io/details";
+
+// period: AAAAMM (ex.: 202402). Aceita uma lista de meses.
+export async function consultarComex(
+  ncm: string,
+  periodos?: number[],
+  limite = 30,
+): Promise<Record<string, unknown>> {
+  const apiKey = (process.env.ELO_LOGCOMEX_API_KEY || "").replace(/^\s*ELO_LOGCOMEX_API_KEY\s*=\s*/, "").trim();
+  if (!apiKey) return { erro: "Consulta de comércio exterior indisponível (chave Logcomex não configurada)." };
+
+  const ncmLimpo = String(ncm).replace(/\D/g, "");
+  if (!ncmLimpo) return { erro: "Informe um NCM válido (apenas números)." };
+
+  // Período padrão: últimos ~12 meses (a partir do mês atual).
+  let periodo = periodos;
+  if (!periodo || !periodo.length) {
+    const hoje = new Date();
+    periodo = [];
+    for (let i = 1; i <= 12; i++) {
+      const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+      periodo.push(d.getFullYear() * 100 + (d.getMonth() + 1));
+    }
+  }
+
+  const body = {
+    filters: [
+      { name: "period", value: periodo, valueLogicalOperator: "or", relationLogicalOperator: "and" },
+      { name: "ncm", value: [ncmLimpo], valueLogicalOperator: "and", relationLogicalOperator: "and" },
+    ],
+    typeOfSearch: "ncm",
+    scroller: { hash: "", size: Math.min(limite, 50), page: 1, sortBy: "val_vmle_us_subitem", sortType: "desc" },
+  };
+
+  try {
+    const r = await fetchComTimeout(LOGCOMEX_URL, {
+      method: "GET",
+      headers: { "x-api-key": apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }, 12000);
+    if (!r.ok) {
+      const txt = await r.text();
+      console.error("Logcomex:", r.status, txt.slice(0, 200));
+      return { erro: `Falha na consulta Logcomex (HTTP ${r.status}).` };
+    }
+    const data = (await r.json()) as { data?: unknown[]; records?: unknown[]; result?: unknown[] };
+    const registros = (data.data || data.records || data.result || []) as Array<Record<string, unknown>>;
+    // Resume os importadores (potenciais clientes) do produto.
+    const importadores = registros.slice(0, limite).map((x) => ({
+      importador: x.importador || x.nm_importador || x.importador_nome,
+      cnpj: x.importador_cnpj,
+      uf: x.importador_uf || x.uf,
+      pais_origem: x.nm_pais_origem,
+      modal: x.via_transp,
+      periodo: x.anomes,
+    }));
+    return {
+      ncm: ncmLimpo,
+      total_registros: registros.length,
+      importadores,
+      fonte: "Logcomex NCM Intel",
+      observacao: "Importadores do NCM no período; use para prospectar clientes com atividade de comex.",
+    };
+  } catch {
+    return { erro: "Falha ao consultar o Logcomex (tempo esgotado ou indisponível)." };
+  }
+}
