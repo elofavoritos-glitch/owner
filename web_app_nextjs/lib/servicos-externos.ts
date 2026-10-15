@@ -368,6 +368,16 @@ export async function consultarComex(
     }, 12000);
     if (status < 200 || status >= 300) {
       console.error("Logcomex:", status, texto.slice(0, 200));
+      // AUT-004 = chave válida, porém o produto "ncm-intel" não está contratado
+      // na conta da ELO (CustomerId). Não é bug: é liberação contratual na Logcomex.
+      if (texto.includes("AUT-004") || /produto n[aã]o contratado/i.test(texto)) {
+        return {
+          erro:
+            "A consulta de comércio exterior (NCM Intel) ainda não está liberada na conta " +
+            "Logcomex da ELO. A chave é válida, mas o produto precisa ser contratado/ativado " +
+            "junto à Logcomex. Assim que liberarem, a consulta passa a funcionar sem mudanças.",
+        };
+      }
       return { erro: `Falha na consulta Logcomex (HTTP ${status}).` };
     }
     const data = JSON.parse(texto) as { data?: unknown[]; records?: unknown[]; result?: unknown[] };
