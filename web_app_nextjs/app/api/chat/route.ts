@@ -14,7 +14,7 @@ import {
 } from "@/lib/elo-intelligence";
 import { escaparBusca, validarData, texto } from "@/lib/seguranca";
 import { gerarPropostaPDF, type ItemProposta } from "@/lib/proposta-pdf";
-import { consultarClima, consultarAeroportos, calcularRota } from "@/lib/servicos-externos";
+import { consultarClima, consultarAeroportos, calcularRota, consultarComex } from "@/lib/servicos-externos";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -111,6 +111,10 @@ async function executarTool(
       } catch (e) {
         return JSON.stringify({ erro: e instanceof Error ? e.message : "Falha ao gerar o PDF." });
       }
+    }
+    if (nome === "consultar_comex") {
+      const periodos = Array.isArray(input.periodos) ? (input.periodos as number[]) : undefined;
+      return JSON.stringify(await consultarComex(String(input.ncm ?? ""), periodos));
     }
     if (nome === "consultar_clima") {
       return JSON.stringify(await consultarClima(String(input.cidade ?? ""), Number(input.dias) || 3));

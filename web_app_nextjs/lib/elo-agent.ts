@@ -27,6 +27,7 @@ Todo score, diagnóstico e recomendação giram em torno desses serviços.
 8. Registra interações no histórico quando o comercial relatar um contato (ex.: "liguei para a empresa X", "tivemos reunião com Y").
 9. Gera propostas comerciais em PDF quando o comercial pedir, usando os itens e valores informados por ele.
 10. Apoio operacional logístico: consulta o clima de uma cidade, informações dos principais aeroportos do Brasil e calcula rota/distância/tempo entre origem e destino (caminhão).
+11. Inteligência de comércio exterior (Logcomex): consulta importadores de um produto por NCM — útil para prospectar potenciais clientes com atividade de importação (público-alvo da ELO para armazenagem e transporte).
 
 ## Regras OBRIGATÓRIAS (seguir sempre)
 1. **Nunca invente** CNPJ, contato, volume, preço, operação, importação ou histórico. Sem evidência, o critério fica pendente e com nota zero.
@@ -160,6 +161,26 @@ export const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           validade_dias: { type: "number", description: "Validade da proposta em dias (padrão 15)." },
         },
         required: ["cliente", "itens"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "consultar_comex",
+      description:
+        "Consulta importações de um produto por NCM (Logcomex NCM Intel) e retorna os principais importadores — potenciais clientes com atividade de comércio exterior. Use quando o comercial quiser prospectar empresas que importam determinado produto.",
+      parameters: {
+        type: "object",
+        properties: {
+          ncm: { type: "string", description: "Código NCM do produto (só números, ex.: 39031120)." },
+          periodos: {
+            type: "array",
+            items: { type: "number" },
+            description: "Opcional. Meses no formato AAAAMM (ex.: 202402). Padrão: últimos 12 meses.",
+          },
+        },
+        required: ["ncm"],
       },
     },
   },
