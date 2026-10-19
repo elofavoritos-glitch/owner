@@ -5,8 +5,19 @@ Este guia é **só para o login SSO do painel web** (botão "Entrar com Microsof
 Python (fluxo Device Code). Aqui usamos o fluxo **OAuth web** do Supabase, que
 exige um **client secret** e uma **redirect URI**.
 
-> O código do app já está 100% pronto: botão em `app/login/page.tsx` e callback em
-> `app/auth/callback/route.ts`. Falta apenas **configuração** (Entra + Supabase).
+> ✅ **STATUS: FUNCIONANDO EM PRODUÇÃO.** O login com Microsoft 365 foi validado
+> e está ativo em `https://owner-webappnextjs.vercel.app/login`.
+>
+> O código do app está pronto: botão em `app/login/page.tsx` e callback em
+> `app/auth/callback/route.ts`. Este guia documenta a configuração (Entra +
+> Supabase) para referência e eventual recriação/renovação do client secret.
+
+### ⏰ Lembrete de manutenção
+O **client secret** do Entra tem data de expiração. Quando ele vencer, o login
+volta a falhar com `Unable to exchange external code`. Para renovar: crie um novo
+secret no Entra (Certificates & secrets → New client secret → copie o **Value**) e
+cole no Supabase (Auth → Providers → Azure → Secret Value → Save). Anote a data de
+expiração na agenda com antecedência.
 
 ## Dados do projeto
 
