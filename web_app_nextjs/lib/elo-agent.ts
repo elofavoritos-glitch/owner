@@ -268,7 +268,7 @@ export const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           funcionarios: { type: "object", properties: { de: { type: "number" }, ate: { type: "number" } } },
           faturamento: { type: "object", properties: { de: { type: "number" }, ate: { type: "number" } } },
           tamanho: { type: "number", description: "Quantas empresas trazer (1 a 100, padrão 20)." },
-          cursor: { type: "string", description: "Cursor da página anterior (para paginar). Opcional." },
+          cursor: { type: ["string", "null"], description: "Cursor da página anterior (para paginar). Opcional; use null na primeira página." },
         },
       },
     },
