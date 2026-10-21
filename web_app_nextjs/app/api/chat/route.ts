@@ -34,6 +34,28 @@ type ChatMsg = { role: "user" | "assistant"; content: string };
 const CANAIS_VALIDOS = ["email", "ligacao", "reuniao", "whatsapp", "evento", "outro"];
 const DIRECOES_VALIDAS = ["enviado", "recebido"];
 
+// Remove o "lixo" que o LLM costuma mandar em campos opcionais (null, strings
+// vazias, arrays/objetos vazios), para não montar filtros inválidos na Econodata.
+function limparFiltros(obj: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v == null) continue;
+    if (typeof v === "string" && !v.trim()) continue;
+    if (Array.isArray(v)) {
+      const arr = v.filter((x) => x != null && !(typeof x === "string" && !x.trim()));
+      if (arr.length) out[k] = arr;
+      continue;
+    }
+    if (typeof v === "object") {
+      const limpo = limparFiltros(v as Record<string, unknown>);
+      if (Object.keys(limpo).length) out[k] = limpo;
+      continue;
+    }
+    out[k] = v;
+  }
+  return out;
+}
+
 // Executa uma ferramenta chamada pelo modelo. Retorna texto (JSON) do resultado.
 // Recebe o usuário logado para gravações (nunca confia no LLM para o responsável).
 async function executarTool(
@@ -123,11 +145,13 @@ async function executarTool(
     }
     // ---------- Econodata (inteligência de empresas) ----------
     if (nome === "econodata_dimensionar_mercado") {
-      return JSON.stringify(await econodataDimensionarMercado(input as FiltrosProspeccao));
+      return JSON.stringify(await econodataDimensionarMercado(limparFiltros(input) as FiltrosProspeccao));
     }
     if (nome === "econodata_prospectar") {
-      const { tamanho, cursor, ...filtros } = input as FiltrosProspeccao & { tamanho?: number; cursor?: string };
-      return JSON.stringify(await econodataProspectar(filtros, Number(tamanho) || 20, cursor ? String(cursor) : undefined));
+      const { tamanho, cursor, ...resto } = input as FiltrosProspeccao & { tamanho?: number; cursor?: unknown };
+      const filtros = limparFiltros(resto) as FiltrosProspeccao;
+      const cur = typeof cursor === "string" && cursor.trim() ? cursor : undefined;
+      return JSON.stringify(await econodataProspectar(filtros, Number(tamanho) || 20, cur));
     }
     if (nome === "econodata_consultar_empresa") {
       const incluir = Array.isArray(input.incluir) ? (input.incluir as string[]) : undefined;
@@ -150,10 +174,11 @@ async function executarTool(
       return JSON.stringify(await econodataSaldo());
     }
     if (nome === "econodata_estimar_custo") {
-      const { cnpj, site, email, incluir, tamanho, ...filtros } = input as FiltrosProspeccao & {
+      const { cnpj, site, email, incluir, tamanho, ...resto } = input as FiltrosProspeccao & {
         cnpj?: string; site?: string; email?: string; incluir?: string[]; tamanho?: number;
       };
-      const temFiltro = Object.values(filtros).some((v) => v != null);
+      const filtros = limparFiltros(resto) as FiltrosProspeccao;
+      const temFiltro = Object.keys(filtros).length > 0;
       return JSON.stringify(await econodataEstimarCusto({
         cnpj: cnpj as string, site: site as string, email: email as string,
         incluir: Array.isArray(incluir) ? incluir : undefined,
