@@ -28,6 +28,7 @@ async function chamar(
   caminho: string,
   corpo?: unknown,
   timeoutMs = 20000,
+  headersExtra?: Record<string, string>,
 ): Promise<EconoResposta> {
   const apiKey = getApiKey();
   if (!apiKey) {
@@ -43,6 +44,7 @@ async function chamar(
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
         Accept: "application/json",
+        ...(headersExtra ?? {}),
       },
       body: corpo !== undefined ? JSON.stringify(corpo) : undefined,
       signal: controller.signal,
@@ -247,4 +249,71 @@ export async function econodataSaldo(): Promise<Record<string, unknown>> {
   if (!r.ok) return { erro: r.erro };
   const d = (r.dados as { saldoTokens?: number }) || {};
   return { saldo_tokens: d.saldoTokens ?? 0, fonte: "Econodata API v4" };
+}
+
+// ---------- 7) Estimar custo (dry-run, GRÁTIS) ----------
+// Usa o header X-Estimate-Only: true — a API devolve { tokensEstimados } sem
+// debitar nem entregar dado. Funciona MESMO com saldo zero, servindo para o
+// time orçar o custo antes de recarregar/consumir tokens.
+export async function econodataEstimarCusto(params: {
+  // modo "empresa": orça uma consulta por CNPJ/site/e-mail
+  cnpj?: string; site?: string; email?: string; incluir?: string[];
+  // modo "mercado": orça prospecção/contagem por filtros
+  filtros?: FiltrosProspeccao; tamanho?: number;
+}): Promise<Record<string, unknown>> {
+  const estimate = { "X-Estimate-Only": "true" };
+
+  // Modo empresa: há identificador?
+  const temIdent = params.cnpj || params.site || params.email;
+  if (temIdent) {
+    const crit: Record<string, string> = {};
+    if (params.cnpj) crit.cnpj = String(params.cnpj).trim();
+    if (params.site) crit.site = String(params.site).trim();
+    if (params.email) crit.email = String(params.email).trim();
+    const buckets = sanitizarBuckets(params.incluir) ?? ["cadastro", "perfilNegocio"];
+    const r = await chamar("POST", "/companies/search", { criterios: crit, incluir: buckets }, 20000, estimate);
+    if (!r.ok) return { erro: r.erro };
+    const d = (r.dados as { tokensEstimados?: number }) || {};
+    return {
+      operacao: "consultar_empresa",
+      tokens_estimados: d.tokensEstimados ?? 0,
+      buckets,
+      fonte: "Econodata API v4 (estimate-only, grátis)",
+      observacao: "Custo estimado em tokens; nada foi debitado nem entregue.",
+    };
+  }
+
+  // Modo mercado: usa os filtros. Se tamanho informado, estima a página
+  // (search_list); senão estima a contagem (calc_list), que é mais barata.
+  if (params.filtros) {
+    const filtros = montarFiltros(params.filtros);
+    if (params.tamanho) {
+      const tam = Math.min(Math.max(Number(params.tamanho) || 20, 1), 100);
+      const r = await chamar("POST", "/companies/search_list",
+        { filtros, pagina: { tamanho: tam }, campos: ["cadastro.razaoSocial", "cadastro.uf", "perfilNegocio.porte"] },
+        20000, estimate);
+      if (!r.ok) return { erro: r.erro };
+      const d = (r.dados as { tokensEstimados?: number }) || {};
+      return {
+        operacao: "prospectar",
+        tamanho_pagina: tam,
+        tokens_estimados: d.tokensEstimados ?? 0,
+        filtros_aplicados: filtros,
+        fonte: "Econodata API v4 (estimate-only, grátis)",
+        observacao: "Custo estimado para UMA página com esse tamanho; nada foi debitado.",
+      };
+    }
+    const r = await chamar("POST", "/companies/calc_list", { filtros }, 20000, estimate);
+    if (!r.ok) return { erro: r.erro };
+    const d = (r.dados as { tokensEstimados?: number }) || {};
+    return {
+      operacao: "dimensionar_mercado",
+      tokens_estimados: d.tokensEstimados ?? 0,
+      filtros_aplicados: filtros,
+      fonte: "Econodata API v4 (estimate-only, grátis)",
+      observacao: "Custo estimado da contagem do recorte; nada foi debitado.",
+    };
+  }
+
+  return { erro: "Informe um identificador (CNPJ/site/e-mail) ou filtros de mercado para estimar o custo." };
 }
