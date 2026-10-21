@@ -53,6 +53,7 @@ Todo score, diagnóstico e recomendação giram em torno desses serviços.
   - **econodata_match**: descobre a empresa (e o CNPJ) quando o comercial só tem o NOME + UF (ou site/telefone/e-mail). Depois, se precisar de mais dados, consulte por CNPJ.
   - **econodata_decisores**: lista os decisores (ou colaboradores) de uma empresa pelo CNPJ — para achar QUEM decide e abordar a pessoa certa. Lembre o comercial do uso responsável (LGPD).
   - **econodata_saldo**: saldo de tokens da conta Econodata (grátis). Use se o comercial perguntar sobre consumo/saldo.
+  - **econodata_estimar_custo**: orça em tokens quanto custaria uma consulta (de empresa ou de mercado) ANTES de gastar — é GRÁTIS e funciona mesmo sem saldo. Use quando o comercial perguntar "quanto custaria" ou quiser planejar o consumo. Se uma consulta paga falhar por saldo (402), você pode oferecer estimar o custo com esta ferramenta.
   - A Econodata cobra em tokens; cada resultado traz 'tokens_cobrados'. Não mencione tokens em toda resposta, só quando o comercial perguntar sobre custo/saldo. Se a consulta falhar por produto não liberado/chave trial (403) ou saldo (402), explique em linguagem simples e não insista.
 - Sempre explique o resultado em linguagem natural para o comercial; não despeje apenas JSON.
 
@@ -335,6 +336,38 @@ export const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
       name: "econodata_saldo",
       description: "Econodata: saldo de tokens da conta (grátis). Use se o comercial perguntar sobre consumo/saldo da Econodata.",
       parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "econodata_estimar_custo",
+      description:
+        "Econodata: estima o custo em tokens de uma consulta ANTES de gastar (dry-run, GRÁTIS — funciona mesmo com saldo zero). Informe um identificador (cnpj/site/email) para orçar a consulta de UMA empresa, OU filtros de mercado para orçar a contagem/prospecção. Use quando o comercial perguntar 'quanto custaria' ou quiser planejar o consumo.",
+      parameters: {
+        type: "object",
+        properties: {
+          cnpj: { type: "string", description: "CNPJ (orça a consulta de 1 empresa)." },
+          site: { type: "string", description: "Site da empresa (orça a consulta de 1 empresa)." },
+          email: { type: "string", description: "E-mail da empresa (orça a consulta de 1 empresa)." },
+          incluir: {
+            type: "array",
+            items: { type: "string", enum: ["cadastro", "estrategico", "perfilNegocio", "contatosBasicos", "contatosAvancados"] },
+            description: "Blocos a considerar na estimativa da empresa. Padrão: cadastro + perfilNegocio.",
+          },
+          uf: { type: "array", items: { type: "string" }, description: "Filtro de mercado: estados." },
+          cidade: { type: "array", items: { type: "string" }, description: "Filtro de mercado: cidades." },
+          porte: {
+            type: "array",
+            items: { type: "string", enum: ["INDIVIDUAL", "MICRO", "PEQUENO", "MEDIO", "GRANDE"] },
+            description: "Filtro de mercado: porte.",
+          },
+          setores: { type: "array", items: { type: "string" }, description: "Filtro de mercado: setores." },
+          cnaePrimario: { type: "array", items: { type: "string" }, description: "Filtro de mercado: CNAE." },
+          comTelefones: { type: "boolean", description: "Filtro de mercado: só com telefone." },
+          tamanho: { type: "number", description: "Se informado com filtros, estima o custo de UMA página de prospecção desse tamanho; sem ele, estima a contagem (mais barata)." },
+        },
+      },
     },
   },
   {

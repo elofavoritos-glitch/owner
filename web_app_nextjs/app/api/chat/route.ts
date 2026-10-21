@@ -17,7 +17,7 @@ import { gerarPropostaPDF, type ItemProposta } from "@/lib/proposta-pdf";
 import { consultarClima, consultarAeroportos, calcularRota, consultarComex } from "@/lib/servicos-externos";
 import {
   econodataConsultarEmpresa, econodataMatch, econodataDimensionarMercado,
-  econodataProspectar, econodataDecisores, econodataSaldo,
+  econodataProspectar, econodataDecisores, econodataSaldo, econodataEstimarCusto,
   type FiltrosProspeccao,
 } from "@/lib/econodata";
 
@@ -148,6 +148,18 @@ async function executarTool(
     }
     if (nome === "econodata_saldo") {
       return JSON.stringify(await econodataSaldo());
+    }
+    if (nome === "econodata_estimar_custo") {
+      const { cnpj, site, email, incluir, tamanho, ...filtros } = input as FiltrosProspeccao & {
+        cnpj?: string; site?: string; email?: string; incluir?: string[]; tamanho?: number;
+      };
+      const temFiltro = Object.values(filtros).some((v) => v != null);
+      return JSON.stringify(await econodataEstimarCusto({
+        cnpj: cnpj as string, site: site as string, email: email as string,
+        incluir: Array.isArray(incluir) ? incluir : undefined,
+        filtros: temFiltro ? (filtros as FiltrosProspeccao) : undefined,
+        tamanho: tamanho != null ? Number(tamanho) : undefined,
+      }));
     }
     if (nome === "consultar_clima") {
       return JSON.stringify(await consultarClima(String(input.cidade ?? ""), Number(input.dias) || 3));
