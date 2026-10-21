@@ -28,6 +28,7 @@ Todo score, diagnóstico e recomendação giram em torno desses serviços.
 9. Gera propostas comerciais em PDF quando o comercial pedir, usando os itens e valores informados por ele.
 10. Apoio operacional logístico: consulta o clima de uma cidade, informações dos principais aeroportos do Brasil e calcula rota/distância/tempo entre origem e destino (caminhão).
 11. Inteligência de comércio exterior (Logcomex): consulta importadores de um produto por NCM — útil para prospectar potenciais clientes com atividade de importação (público-alvo da ELO para armazenagem e transporte).
+12. Inteligência de empresas (Econodata): prospecta empresas brasileiras por filtros (UF, cidade, porte, setor, CNAE, palavras-chave, faturamento, nº de funcionários), dimensiona o tamanho de um mercado, consulta/enriquece uma empresa por CNPJ/site/e-mail, descobre a empresa por nome+UF e mapeia os decisores (quem decide) de uma empresa. É a principal fonte para montar listas de leads qualificados.
 
 ## Regras OBRIGATÓRIAS (seguir sempre)
 1. **Nunca invente** CNPJ, contato, volume, preço, operação, importação ou histórico. Sem evidência, o critério fica pendente e com nota zero.
@@ -45,6 +46,14 @@ Todo score, diagnóstico e recomendação giram em torno desses serviços.
 - Use **consultar_clima** para previsão do tempo de uma cidade (útil para planejar entregas/armazenagem). **consultar_aeroportos** para dados dos principais aeroportos do Brasil (código IATA, cidade, observações) — é base de referência, não status de voos ao vivo. **calcular_rota** para distância e tempo estimado de caminhão entre dois locais (não considera trânsito em tempo real).
 - Use **gerar_proposta** quando o comercial pedir uma proposta/PDF para um cliente. O cliente precisa existir no cadastro. Monte os itens (descrição, quantidade, valor_unitario) APENAS com os valores que o comercial informar — item sem valor entra como "a definir" e não soma. Nunca invente preços. Ao concluir, informe ao usuário o link de download retornado pela ferramenta.
 - Use **calcular_score** quando já houver evidências estruturadas, ou **analisar_diagnostico** para transformar respostas de diagnóstico em evidências e recomendações.
+- **Econodata — prospecção e inteligência de empresas:**
+  - **econodata_prospectar**: monta lista de leads por filtros (UF, cidade, porte, setor, CNAE, palavras-chave no nome, com telefone/e-mail, faixa de funcionários/faturamento). Use quando o comercial quiser ENCONTRAR empresas novas que se encaixam no ICP da ELO.
+  - **econodata_dimensionar_mercado**: devolve só a CONTAGEM de empresas de um recorte (TAM), é a opção barata. SEMPRE prefira dimensionar antes de prospectar listas grandes, para o comercial saber o tamanho e não gastar tokens à toa. Sugira: "são X empresas nesse recorte; quer que eu traga as primeiras?".
+  - **econodata_consultar_empresa**: consulta/enriquece UMA empresa por CNPJ, site ou e-mail (cadastro, porte, comércio exterior, dívidas, NCM, contatos). Use para qualificar um lead ou completar o cadastro.
+  - **econodata_match**: descobre a empresa (e o CNPJ) quando o comercial só tem o NOME + UF (ou site/telefone/e-mail). Depois, se precisar de mais dados, consulte por CNPJ.
+  - **econodata_decisores**: lista os decisores (ou colaboradores) de uma empresa pelo CNPJ — para achar QUEM decide e abordar a pessoa certa. Lembre o comercial do uso responsável (LGPD).
+  - **econodata_saldo**: saldo de tokens da conta Econodata (grátis). Use se o comercial perguntar sobre consumo/saldo.
+  - A Econodata cobra em tokens; cada resultado traz 'tokens_cobrados'. Não mencione tokens em toda resposta, só quando o comercial perguntar sobre custo/saldo. Se a consulta falhar por produto não liberado/chave trial (403) ou saldo (402), explique em linguagem simples e não insista.
 - Sempre explique o resultado em linguagem natural para o comercial; não despeje apenas JSON.
 
 ## Perfil de cliente ideal (ICP) da ELO
@@ -182,6 +191,150 @@ export const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
         },
         required: ["ncm"],
       },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "econodata_dimensionar_mercado",
+      description:
+        "Econodata: conta quantas empresas existem num recorte de mercado (TAM), sem listar — é a opção barata. Use ANTES de prospectar listas, para dimensionar o mercado e evitar gasto desnecessário.",
+      parameters: {
+        type: "object",
+        properties: {
+          uf: { type: "array", items: { type: "string" }, description: "Siglas de estados (ex.: ['SC','PR'])." },
+          cidade: { type: "array", items: { type: "string" }, description: "Cidades (ex.: ['Itajaí'])." },
+          porte: {
+            type: "array",
+            items: { type: "string", enum: ["INDIVIDUAL", "MICRO", "PEQUENO", "MEDIO", "GRANDE"] },
+            description: "Porte das empresas.",
+          },
+          setores: { type: "array", items: { type: "string" }, description: "Setores de atuação (linguagem de negócio)." },
+          cnaePrimario: { type: "array", items: { type: "string" }, description: "Códigos CNAE (completo ou prefixo)." },
+          palavrasChave: {
+            type: "object",
+            description: "Termos no nome/produtos da empresa.",
+            properties: {
+              incluir: { type: "array", items: { type: "string" } },
+              excluir: { type: "array", items: { type: "string" } },
+              em: { type: "array", items: { type: "string", enum: ["NOME_EMPRESA", "PRODUTOS_SERVICOS"] } },
+            },
+          },
+          comTelefones: { type: "boolean", description: "Só empresas com telefone." },
+          comEmailsValidados: { type: "boolean", description: "Só empresas com e-mail validado." },
+          funcionarios: {
+            type: "object",
+            properties: { de: { type: "number" }, ate: { type: "number" } },
+            description: "Faixa de número de funcionários.",
+          },
+          faturamento: {
+            type: "object",
+            properties: { de: { type: "number" }, ate: { type: "number" } },
+            description: "Faixa de faturamento anual em reais.",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "econodata_prospectar",
+      description:
+        "Econodata: monta uma lista de empresas (leads) que casam com os filtros do ICP da ELO. Use para ENCONTRAR empresas novas para prospectar. Prefira dimensionar o mercado antes se o recorte puder ser muito grande. Para a próxima página, reenvie os mesmos filtros com o cursor.",
+      parameters: {
+        type: "object",
+        properties: {
+          uf: { type: "array", items: { type: "string" }, description: "Siglas de estados (ex.: ['SC','PR'])." },
+          cidade: { type: "array", items: { type: "string" }, description: "Cidades." },
+          porte: {
+            type: "array",
+            items: { type: "string", enum: ["INDIVIDUAL", "MICRO", "PEQUENO", "MEDIO", "GRANDE"] },
+            description: "Porte das empresas.",
+          },
+          setores: { type: "array", items: { type: "string" }, description: "Setores de atuação." },
+          cnaePrimario: { type: "array", items: { type: "string" }, description: "Códigos CNAE (completo ou prefixo)." },
+          palavrasChave: {
+            type: "object",
+            properties: {
+              incluir: { type: "array", items: { type: "string" } },
+              excluir: { type: "array", items: { type: "string" } },
+              em: { type: "array", items: { type: "string", enum: ["NOME_EMPRESA", "PRODUTOS_SERVICOS"] } },
+            },
+          },
+          comTelefones: { type: "boolean", description: "Só empresas com telefone." },
+          comEmailsValidados: { type: "boolean", description: "Só empresas com e-mail validado." },
+          funcionarios: { type: "object", properties: { de: { type: "number" }, ate: { type: "number" } } },
+          faturamento: { type: "object", properties: { de: { type: "number" }, ate: { type: "number" } } },
+          tamanho: { type: "number", description: "Quantas empresas trazer (1 a 100, padrão 20)." },
+          cursor: { type: "string", description: "Cursor da página anterior (para paginar). Opcional." },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "econodata_consultar_empresa",
+      description:
+        "Econodata: consulta e enriquece UMA empresa por CNPJ, site ou e-mail (cadastro, porte, comércio exterior, dívidas, NCM, contatos). Use para qualificar um lead específico ou completar o cadastro.",
+      parameters: {
+        type: "object",
+        properties: {
+          cnpj: { type: "string", description: "CNPJ da empresa (com ou sem máscara)." },
+          site: { type: "string", description: "Domínio/site da empresa." },
+          email: { type: "string", description: "E-mail da empresa." },
+          incluir: {
+            type: "array",
+            items: { type: "string", enum: ["cadastro", "estrategico", "perfilNegocio", "contatosBasicos", "contatosAvancados"] },
+            description: "Blocos de dados a trazer. Padrão: cadastro + perfilNegocio.",
+          },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "econodata_match",
+      description:
+        "Econodata: descobre a empresa (e o CNPJ) a partir de dados parciais — tipicamente NOME + UF, ou site/telefone/e-mail — quando o comercial não tem o CNPJ. Retorna os melhores candidatos.",
+      parameters: {
+        type: "object",
+        properties: {
+          nome: { type: "string", description: "Nome/razão social (parcial) da empresa." },
+          uf: { type: "string", description: "Sigla do estado (ajuda a desambiguar)." },
+          site: { type: "string" },
+          email: { type: "string" },
+          telefone: { type: "string" },
+          cnpj: { type: "string" },
+        },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "econodata_decisores",
+      description:
+        "Econodata: lista os decisores (ou colaboradores) de uma empresa pelo CNPJ — para achar quem decide e abordar a pessoa certa. Dados pessoais: lembrar o comercial do uso responsável (LGPD).",
+      parameters: {
+        type: "object",
+        properties: {
+          cnpj: { type: "string", description: "CNPJ da empresa (14 dígitos)." },
+          papel: { type: "string", enum: ["decisores", "colaboradores"], description: "Padrão: decisores." },
+          tamanho: { type: "number", description: "Quantas pessoas trazer (1 a 100, padrão 20)." },
+        },
+        required: ["cnpj"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "econodata_saldo",
+      description: "Econodata: saldo de tokens da conta (grátis). Use se o comercial perguntar sobre consumo/saldo da Econodata.",
+      parameters: { type: "object", properties: {} },
     },
   },
   {

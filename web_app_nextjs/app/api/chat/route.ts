@@ -15,6 +15,11 @@ import {
 import { escaparBusca, validarData, texto } from "@/lib/seguranca";
 import { gerarPropostaPDF, type ItemProposta } from "@/lib/proposta-pdf";
 import { consultarClima, consultarAeroportos, calcularRota, consultarComex } from "@/lib/servicos-externos";
+import {
+  econodataConsultarEmpresa, econodataMatch, econodataDimensionarMercado,
+  econodataProspectar, econodataDecisores, econodataSaldo,
+  type FiltrosProspeccao,
+} from "@/lib/econodata";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -115,6 +120,34 @@ async function executarTool(
     if (nome === "consultar_comex") {
       const periodos = Array.isArray(input.periodos) ? (input.periodos as number[]) : undefined;
       return JSON.stringify(await consultarComex(String(input.ncm ?? ""), periodos));
+    }
+    // ---------- Econodata (inteligência de empresas) ----------
+    if (nome === "econodata_dimensionar_mercado") {
+      return JSON.stringify(await econodataDimensionarMercado(input as FiltrosProspeccao));
+    }
+    if (nome === "econodata_prospectar") {
+      const { tamanho, cursor, ...filtros } = input as FiltrosProspeccao & { tamanho?: number; cursor?: string };
+      return JSON.stringify(await econodataProspectar(filtros, Number(tamanho) || 20, cursor ? String(cursor) : undefined));
+    }
+    if (nome === "econodata_consultar_empresa") {
+      const incluir = Array.isArray(input.incluir) ? (input.incluir as string[]) : undefined;
+      return JSON.stringify(await econodataConsultarEmpresa(
+        { cnpj: input.cnpj as string, site: input.site as string, email: input.email as string },
+        incluir,
+      ));
+    }
+    if (nome === "econodata_match") {
+      return JSON.stringify(await econodataMatch({
+        nome: input.nome as string, uf: input.uf as string, site: input.site as string,
+        email: input.email as string, telefone: input.telefone as string, cnpj: input.cnpj as string,
+      }));
+    }
+    if (nome === "econodata_decisores") {
+      const papel = input.papel === "colaboradores" ? "colaboradores" : "decisores";
+      return JSON.stringify(await econodataDecisores(String(input.cnpj ?? ""), papel, Number(input.tamanho) || 20));
+    }
+    if (nome === "econodata_saldo") {
+      return JSON.stringify(await econodataSaldo());
     }
     if (nome === "consultar_clima") {
       return JSON.stringify(await consultarClima(String(input.cidade ?? ""), Number(input.dias) || 3));
