@@ -8,7 +8,7 @@ import Charts from "./charts";
 import SairButton from "./sair-button";
 import AjudaButton from "./ajuda-button";
 import Logo from "./logo";
-import { IconClientes, IconInteracoes, IconPropostas, IconAssistente } from "./icons";
+import { IconClientes, IconInteracoes, IconPropostas, IconAssistente, IconDashboard } from "./icons";
 
 // A página depende de cookies/sessão: precisa ser renderizada dinamicamente.
 export const dynamic = "force-dynamic";
@@ -77,6 +77,7 @@ export default async function Dashboard() {
           <Logo height={40} />
         </div>
         <div className="elo-actions">
+          <Link href="/dashboards" className="elo-link"><IconDashboard /> Dashboards</Link>
           <Link href="/clientes" className="elo-link"><IconClientes /> Clientes</Link>
           <Link href="/interacoes" className="elo-link"><IconInteracoes /> Interações</Link>
           <Link href="/propostas" className="elo-link"><IconPropostas /> Propostas</Link>
