@@ -29,6 +29,10 @@ Todo score, diagnóstico e recomendação giram em torno desses serviços.
 10. Apoio operacional logístico: consulta o clima de uma cidade, informações dos principais aeroportos do Brasil e calcula rota/distância/tempo entre origem e destino (caminhão).
 11. Inteligência de comércio exterior (Logcomex): consulta importadores de um produto por NCM — útil para prospectar potenciais clientes com atividade de importação (público-alvo da ELO para armazenagem e transporte).
 12. Inteligência de empresas (Econodata): prospecta empresas brasileiras por filtros (UF, cidade, porte, setor, CNAE, palavras-chave, faturamento, nº de funcionários), dimensiona o tamanho de um mercado, consulta/enriquece uma empresa por CNPJ/site/e-mail, descobre a empresa por nome+UF e mapeia os decisores (quem decide) de uma empresa. É a principal fonte para montar listas de leads qualificados.
+13. Tradução de textos (PT ⇄ ES e outros idiomas) para comunicação com clientes e fornecedores do Mercosul.
+14. Cadastro automático de cliente a partir da Econodata (consulta o CNPJ e preenche os dados).
+15. Briefing do dia: resumo das próximas ações e follow-ups pendentes do comercial.
+16. Qualificação de lead: cruza os dados da Econodata com o ICP da ELO e gera um score de oportunidade explicável.
 
 ## Regras OBRIGATÓRIAS (seguir sempre)
 1. **Nunca invente** CNPJ, contato, volume, preço, operação, importação ou histórico. Sem evidência, o critério fica pendente e com nota zero.
@@ -54,6 +58,10 @@ Todo score, diagnóstico e recomendação giram em torno desses serviços.
   - **econodata_decisores**: lista os decisores (ou colaboradores) de uma empresa pelo CNPJ — para achar QUEM decide e abordar a pessoa certa. Lembre o comercial do uso responsável (LGPD).
   - **econodata_saldo**: saldo de tokens da conta Econodata (grátis). Use se o comercial perguntar sobre consumo/saldo.
   - **econodata_estimar_custo**: orça em tokens quanto custaria uma consulta (de empresa ou de mercado) ANTES de gastar — é GRÁTIS e funciona mesmo sem saldo. Use quando o comercial perguntar "quanto custaria" ou quiser planejar o consumo. Se uma consulta paga falhar por saldo (402), você pode oferecer estimar o custo com esta ferramenta.
+- Use **traduzir** para verter e-mails, propostas ou mensagens para espanhol (padrão) ou outro idioma. Ao entregar a tradução, lembre que é automática e vale revisar antes de enviar ao cliente.
+- Use **cadastrar_cliente_econodata** quando o comercial quiser salvar no cadastro uma empresa encontrada na prospecção — ela é consultada na Econodata pelo CNPJ e os dados são preenchidos. SEMPRE confirme com o comercial antes de cadastrar e informe o que foi salvo depois.
+- Use **briefing_do_dia** quando o comercial pedir o resumo do dia / por onde começar: traz próximas ações vencidas ou de hoje e follow-ups pendentes.
+- Use **qualificar_lead** quando o comercial quiser saber se uma empresa vale a pena: cruza os dados da Econodata (porte, região, setor, comércio exterior) com o ICP da ELO e devolve o score. Explique o score e a próxima ação em linguagem simples.
   - A Econodata cobra em tokens; cada resultado traz 'tokens_cobrados'. Não mencione tokens em toda resposta, só quando o comercial perguntar sobre custo/saldo. Se a consulta falhar por produto não liberado/chave trial (403) ou saldo (402), explique em linguagem simples e não insista.
 - Sempre explique o resultado em linguagem natural para o comercial; não despeje apenas JSON.
 
@@ -367,6 +375,63 @@ export const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           comTelefones: { type: "boolean", description: "Filtro de mercado: só com telefone." },
           tamanho: { type: "number", description: "Se informado com filtros, estima o custo de UMA página de prospecção desse tamanho; sem ele, estima a contagem (mais barata)." },
         },
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "traduzir",
+      description:
+        "Traduz um texto para outro idioma (padrão espanhol) — útil para e-mails, propostas e mensagens com clientes/fornecedores do Mercosul. Use quando o comercial pedir para traduzir algo ou escrever em outro idioma.",
+      parameters: {
+        type: "object",
+        properties: {
+          texto: { type: "string", description: "Texto a traduzir." },
+          idioma_destino: { type: "string", description: "Idioma de destino (ex.: espanhol, português, inglês). Padrão: espanhol." },
+        },
+        required: ["texto"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "cadastrar_cliente_econodata",
+      description:
+        "Cadastra uma empresa no cadastro de clientes da ELO a partir dos dados da Econodata (consulta o CNPJ e preenche razão social, cidade, UF, telefone e porte automaticamente). Use quando o comercial disser para cadastrar/salvar uma empresa que encontrou na prospecção. CONFIRME com o comercial antes de cadastrar.",
+      parameters: {
+        type: "object",
+        properties: {
+          cnpj: { type: "string", description: "CNPJ da empresa a cadastrar (será consultada na Econodata)." },
+          segmento: { type: "string", description: "Opcional. Segmento/setor, se o comercial informar." },
+          observacoes: { type: "string", description: "Opcional. Observações do comercial." },
+        },
+        required: ["cnpj"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "briefing_do_dia",
+      description:
+        "Monta o resumo do dia para o comercial: oportunidades com próxima ação vencida ou para hoje, e empresas sem contato há muito tempo (follow-up pendente). Use quando o comercial perguntar 'o que tenho para hoje?', 'meu resumo', 'por onde começo?'.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "qualificar_lead",
+      description:
+        "Qualifica uma empresa como lead da ELO: consulta a Econodata pelo CNPJ e cruza porte, região (SC/PR/RS), setor e comércio exterior com o perfil de cliente ideal (ICP), devolvendo um score de oportunidade (0-100) explicável. Use quando o comercial quiser saber se uma empresa vale a pena prospectar.",
+      parameters: {
+        type: "object",
+        properties: {
+          cnpj: { type: "string", description: "CNPJ da empresa a qualificar (será consultada na Econodata)." },
+        },
+        required: ["cnpj"],
       },
     },
   },
