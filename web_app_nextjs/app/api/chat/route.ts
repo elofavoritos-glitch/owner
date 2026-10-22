@@ -25,7 +25,10 @@ import { qualificarLead, type EmpresaEconodata } from "@/lib/qualificacao-lead";
 import { gerarApresentacaoPPTX, type SlideInput } from "@/lib/apresentacao-pptx";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+// Algumas ferramentas chamam APIs externas (Econodata) e depois o modelo ainda
+// redige a resposta — o conjunto pode passar de 60s. 120s dá folga (a Vercel
+// limita ao teto do plano se for menor, sem quebrar).
+export const maxDuration = 120;
 
 const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
 // Modelo configurável; default disponível no free/developer tier da Groq e com
@@ -313,7 +316,20 @@ async function executarTool(
       if (dados.erro) return JSON.stringify({ erro: `Não foi possível consultar a empresa na Econodata: ${dados.erro}` });
       const emp = (dados.empresa ?? {}) as EmpresaEconodata;
       try {
-        return JSON.stringify(qualificarLead(emp));
+        const q = qualificarLead(emp);
+        // Retorno enxuto: o cálculo já está pronto; o modelo só traduz em
+        // linguagem simples (evita payload grande que atrasa a resposta).
+        return JSON.stringify({
+          empresa: q.resumo.razaoSocial,
+          cnpj: q.resumo.cnpj,
+          uf: q.resumo.uf,
+          porte: q.resumo.porte,
+          comercio_exterior: q.resumo.comComex,
+          score: q.score.score,
+          prioridade: q.score.prioridade,
+          servicos_recomendados: q.score.servicos_recomendados,
+          pendencias: q.score.pendencias,
+        });
       } catch (e) {
         return JSON.stringify({ erro: e instanceof Error ? e.message : "Falha ao qualificar o lead." });
       }
