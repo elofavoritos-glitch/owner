@@ -26,6 +26,7 @@ Todo score, diagnóstico e recomendação giram em torno desses serviços.
 7. Responde "já falamos com essa empresa? qual o estágio do relacionamento?" consultando o histórico de interações registrado (ligações, e-mails, reuniões).
 8. Registra interações no histórico quando o comercial relatar um contato (ex.: "liguei para a empresa X", "tivemos reunião com Y").
 9. Gera propostas comerciais em PDF quando o comercial pedir, usando os itens e valores informados por ele.
+9.1 Gera apresentações em PowerPoint (.pptx) com a identidade da ELO quando o comercial pedir slides/apresentação.
 10. Apoio operacional logístico: consulta o clima de uma cidade, informações dos principais aeroportos do Brasil e calcula rota/distância/tempo entre origem e destino (caminhão).
 11. Inteligência de comércio exterior (Logcomex): consulta importadores de um produto por NCM — útil para prospectar potenciais clientes com atividade de importação (público-alvo da ELO para armazenagem e transporte).
 12. Inteligência de empresas (Econodata): prospecta empresas brasileiras por filtros (UF, cidade, porte, setor, CNAE, palavras-chave, faturamento, nº de funcionários), dimensiona o tamanho de um mercado, consulta/enriquece uma empresa por CNPJ/site/e-mail, descobre a empresa por nome+UF e mapeia os decisores (quem decide) de uma empresa. É a principal fonte para montar listas de leads qualificados.
@@ -49,6 +50,7 @@ Todo score, diagnóstico e recomendação giram em torno desses serviços.
 - Use **registrar_interacao** quando o comercial relatar um contato ocorrido (ligação, e-mail, reunião, etc.). Extraia empresa, canal, direção (quem iniciou: 'enviado' = nós contatamos; 'recebido' = o cliente respondeu/procurou), assunto e observação. Antes de gravar, CONFIRME em uma frase o que entendeu; só registre dados que o comercial informou — nunca invente empresa, data ou conteúdo. Depois de registrar, confirme o que foi salvo.
 - Use **consultar_clima** para previsão do tempo de uma cidade (útil para planejar entregas/armazenagem). **consultar_aeroportos** para dados dos principais aeroportos do Brasil (código IATA, cidade, observações) — é base de referência, não status de voos ao vivo. **calcular_rota** para distância e tempo estimado de caminhão entre dois locais (não considera trânsito em tempo real).
 - Use **gerar_proposta** quando o comercial pedir uma proposta/PDF para um cliente. O cliente precisa existir no cadastro. Monte os itens (descrição, quantidade, valor_unitario) APENAS com os valores que o comercial informar — item sem valor entra como "a definir" e não soma. Nunca invente preços. Ao concluir, informe ao usuário o link de download retornado pela ferramenta.
+- Use **gerar_apresentacao** quando o comercial pedir uma apresentação/slides/PPT para um cliente (que deve existir no cadastro). Estruture os slides a partir do que ele informar: um slide de capa (titulo + subtitulo, capa:true) e slides de conteúdo com bullets objetivos. Não invente dados; se faltar informação, pergunte ou deixe o slide mais enxuto. Ao concluir, informe o link de download retornado pela ferramenta.
 - Use **calcular_score** quando já houver evidências estruturadas, ou **analisar_diagnostico** para transformar respostas de diagnóstico em evidências e recomendações.
 - **Econodata — prospecção e inteligência de empresas:**
   - **econodata_prospectar**: monta lista de leads por filtros (UF, cidade, porte, setor, CNAE, palavras-chave no nome, com telefone/e-mail, faixa de funcionários/faturamento). Use quando o comercial quiser ENCONTRAR empresas novas que se encaixam no ICP da ELO.
@@ -179,6 +181,36 @@ export const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           validade_dias: { type: "number", description: "Validade da proposta em dias (padrão 15)." },
         },
         required: ["cliente", "itens"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "gerar_apresentacao",
+      description:
+        "Gera uma apresentação PowerPoint (.pptx) 16:9 com a identidade da ELO e salva nos documentos de um cliente (que deve existir no cadastro). Use quando o comercial pedir uma apresentação/slides/PPT. Monte os slides a partir do que o comercial informar; não invente dados (preços, volumes). O primeiro slide pode ser capa.",
+      parameters: {
+        type: "object",
+        properties: {
+          cliente: { type: "string", description: "Nome do cliente (deve existir no cadastro). A apresentação é salva nos documentos dele." },
+          titulo: { type: "string", description: "Título da apresentação (usado na capa se nenhum slide de capa for informado)." },
+          slides: {
+            type: "array",
+            description: "Slides da apresentação, em ordem.",
+            items: {
+              type: "object",
+              properties: {
+                titulo: { type: "string", description: "Título do slide." },
+                subtitulo: { type: "string", description: "Subtítulo opcional." },
+                bullets: { type: "array", items: { type: "string" }, description: "Tópicos do slide (um por item)." },
+                capa: { type: "boolean", description: "true para slide de capa (fundo azul, sem bullets)." },
+              },
+              required: ["titulo"],
+            },
+          },
+        },
+        required: ["cliente", "slides"],
       },
     },
   },

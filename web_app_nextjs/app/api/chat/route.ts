@@ -22,6 +22,7 @@ import {
 } from "@/lib/econodata";
 import { traduzir } from "@/lib/traducao";
 import { qualificarLead, type EmpresaEconodata } from "@/lib/qualificacao-lead";
+import { gerarApresentacaoPPTX, type SlideInput } from "@/lib/apresentacao-pptx";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -139,6 +140,62 @@ async function executarTool(
         });
       } catch (e) {
         return JSON.stringify({ erro: e instanceof Error ? e.message : "Falha ao gerar o PDF." });
+      }
+    }
+    if (nome === "gerar_apresentacao") {
+      const clienteNome = String(input.cliente ?? "").trim();
+      if (!clienteNome) return JSON.stringify({ erro: "Informe o cliente." });
+      const slidesRaw = Array.isArray(input.slides) ? input.slides : [];
+      const slides: SlideInput[] = slidesRaw
+        .map((s) => {
+          const o = s as Record<string, unknown>;
+          const titulo = texto(o.titulo, 120);
+          if (!titulo) return null;
+          const bulletsRaw = Array.isArray(o.bullets) ? o.bullets : [];
+          const bullets = bulletsRaw
+            .map((b) => texto(b, 240))
+            .filter((b): b is string => !!b)
+            .slice(0, 12);
+          return {
+            titulo,
+            subtitulo: texto(o.subtitulo, 160) || undefined,
+            bullets,
+            capa: o.capa === true,
+          } as SlideInput;
+        })
+        .filter((s): s is SlideInput => s !== null)
+        .slice(0, 30);
+      if (!slides.length) return JSON.stringify({ erro: "Informe ao menos um slide com título." });
+
+      const supabase = supabaseServer();
+      const { data: cli } = await supabase
+        .from("clientes").select("id,empresa")
+        .ilike("empresa", `%${escaparBusca(clienteNome)}%`).limit(1).maybeSingle();
+      if (!cli) return JSON.stringify({ erro: `Cliente "${clienteNome}" não encontrado no cadastro. Cadastre-o primeiro.` });
+
+      const { data: perfil } = await supabase.from("perfis").select("nome").eq("id", user.id).maybeSingle();
+      const responsavel = perfil?.nome || user.email || null;
+      try {
+        const pptx = gerarApresentacaoPPTX(slides);
+        const nomeArq = `apresentacao-${cli.empresa.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 40)}-${new Date().toISOString().slice(0, 10)}.pptx`;
+        const caminho = `${cli.id}/${crypto.randomUUID()}-${nomeArq}`;
+        const mime = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+        const { error: upErr } = await supabase.storage.from("documentos")
+          .upload(caminho, pptx, { contentType: mime, upsert: false });
+        if (upErr) return JSON.stringify({ erro: "Falha ao salvar a apresentação." });
+        const { data: doc, error } = await supabase.from("documentos").insert({
+          cliente_id: cli.id, empresa: cli.empresa, tipo: "outro", nome_arquivo: nomeArq,
+          caminho, tamanho_bytes: pptx.length, mime,
+          responsavel_id: user.id, responsavel_nome: responsavel,
+        }).select("id").single();
+        if (error) { await supabase.storage.from("documentos").remove([caminho]); return JSON.stringify({ erro: "Falha ao registrar a apresentação." }); }
+        return JSON.stringify({
+          ok: true, cliente: cli.empresa, slides: slides.length,
+          link_download: `/api/documentos/download?id=${doc.id}`,
+          aviso: "Apresentação .pptx gerada e salva nos documentos do cliente. Informe o link ao usuário e lembre de revisar no PowerPoint antes de apresentar.",
+        });
+      } catch (e) {
+        return JSON.stringify({ erro: e instanceof Error ? e.message : "Falha ao gerar a apresentação." });
       }
     }
     if (nome === "consultar_comex") {
