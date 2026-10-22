@@ -20,6 +20,8 @@ import {
   econodataProspectar, econodataDecisores, econodataSaldo, econodataEstimarCusto,
   type FiltrosProspeccao,
 } from "@/lib/econodata";
+import { traduzir } from "@/lib/traducao";
+import { qualificarLead, type EmpresaEconodata } from "@/lib/qualificacao-lead";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -185,6 +187,79 @@ async function executarTool(
         filtros: temFiltro ? (filtros as FiltrosProspeccao) : undefined,
         tamanho: tamanho != null ? Number(tamanho) : undefined,
       }));
+    }
+    // ---------- Tradução ----------
+    if (nome === "traduzir") {
+      return JSON.stringify(await traduzir(String(input.texto ?? ""), String(input.idioma_destino ?? "espanhol")));
+    }
+    // ---------- Cadastrar cliente a partir da Econodata ----------
+    if (nome === "cadastrar_cliente_econodata") {
+      const cnpjIn = String(input.cnpj ?? "").replace(/\D/g, "");
+      if (cnpjIn.length !== 14) return JSON.stringify({ erro: "Informe um CNPJ válido (14 dígitos)." });
+      const dados = await econodataConsultarEmpresa({ cnpj: cnpjIn }, ["cadastro", "perfilNegocio", "contatosBasicos"]);
+      if (dados.erro) return JSON.stringify({ erro: `Não foi possível consultar a empresa na Econodata: ${dados.erro}` });
+      const emp = (dados.empresa ?? {}) as EmpresaEconodata;
+      const cad = emp.cadastro ?? {};
+      const razao = cad.razaoSocial || cad.nomeFantasia;
+      if (!razao) return JSON.stringify({ erro: "A Econodata não retornou a razão social; não é seguro cadastrar sem nome." });
+      const tel = emp.contatosBasicos?.telefones?.[0]?.numero ?? null;
+      const porte = emp.perfilNegocio?.porte ?? null;
+      const supabase = supabaseServer();
+      // evita duplicar: já existe cliente com esse CNPJ?
+      const { data: existente } = await supabase.from("clientes").select("id,empresa").eq("cnpj", emp.cnpj ?? cnpjIn).limit(1).maybeSingle();
+      if (existente) return JSON.stringify({ ok: true, ja_existia: true, cliente: existente.empresa, aviso: "Empresa já estava no cadastro." });
+      const { data: perfil } = await supabase.from("perfis").select("nome").eq("id", user.id).maybeSingle();
+      const obsPartes = [porte ? `Porte: ${porte}` : null, texto(input.observacoes, 1500)].filter(Boolean);
+      const registro = {
+        empresa: texto(razao, 160),
+        cnpj: texto(emp.cnpj ?? cnpjIn, 20),
+        cidade: texto(cad.cidade, 80),
+        uf: texto(cad.uf, 2),
+        telefone: texto(tel, 30),
+        segmento: texto(input.segmento ?? (cad.setores?.[0] ?? null), 80),
+        observacoes: obsPartes.length ? obsPartes.join(" · ") : null,
+        responsavel_id: user.id,
+        responsavel_nome: perfil?.nome || user.email || null,
+      };
+      const { data, error } = await supabase.from("clientes").insert(registro).select("id,empresa").single();
+      if (error) return JSON.stringify({ erro: error.message });
+      return JSON.stringify({ ok: true, cadastrado: data, dados_preenchidos: { cnpj: registro.cnpj, cidade: registro.cidade, uf: registro.uf, telefone: registro.telefone, porte } });
+    }
+    // ---------- Briefing do dia ----------
+    if (nome === "briefing_do_dia") {
+      const supabase = supabaseServer();
+      const hoje = new Date().toISOString().slice(0, 10);
+      // oportunidades com proxima acao vencida ou para hoje (RLS limita ao usuário/gestor)
+      const { data: ops, error: e1 } = await supabase
+        .from("oportunidades")
+        .select("cliente_nome,etapa,proxima_acao,data_proxima_acao,valor_potencial")
+        .not("data_proxima_acao", "is", null)
+        .lte("data_proxima_acao", hoje)
+        .in("status", ["Ativa", "Em espera"])
+        .order("data_proxima_acao", { ascending: true })
+        .limit(30);
+      if (e1) return JSON.stringify({ erro: e1.message });
+      return JSON.stringify({
+        data: hoje,
+        acoes_pendentes: ops ?? [],
+        total: ops?.length ?? 0,
+        observacao: (ops?.length ?? 0) === 0
+          ? "Sem próximas ações vencidas ou para hoje. Bom momento para prospectar novos leads."
+          : "Próximas ações vencidas ou para hoje — priorize por data.",
+      });
+    }
+    // ---------- Qualificar lead (Econodata × ICP) ----------
+    if (nome === "qualificar_lead") {
+      const cnpjIn = String(input.cnpj ?? "").replace(/\D/g, "");
+      if (cnpjIn.length !== 14) return JSON.stringify({ erro: "Informe um CNPJ válido (14 dígitos)." });
+      const dados = await econodataConsultarEmpresa({ cnpj: cnpjIn }, ["cadastro", "perfilNegocio"]);
+      if (dados.erro) return JSON.stringify({ erro: `Não foi possível consultar a empresa na Econodata: ${dados.erro}` });
+      const emp = (dados.empresa ?? {}) as EmpresaEconodata;
+      try {
+        return JSON.stringify(qualificarLead(emp));
+      } catch (e) {
+        return JSON.stringify({ erro: e instanceof Error ? e.message : "Falha ao qualificar o lead." });
+      }
     }
     if (nome === "consultar_clima") {
       return JSON.stringify(await consultarClima(String(input.cidade ?? ""), Number(input.dias) || 3));
