@@ -42,3 +42,7 @@ export const IconUpload = ({ size = 15 }: P) => (
 export const IconVoltar = ({ size = 15 }: P) => (
   <svg {...base(size)}><path d="M19 12H5" /><path d="M12 19l-7-7 7-7" /></svg>
 );
+
+export const IconDashboard = ({ size = 16 }: P) => (
+  <svg {...base(size)}><path d="M3 3h8v8H3zM13 3h8v5h-8zM13 11h8v10h-8zM3 14h8v7H3z" /></svg>
+);
