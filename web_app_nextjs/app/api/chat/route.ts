@@ -428,8 +428,31 @@ export async function POST(request: Request) {
   // ---------- MODO COMPLETO (Groq com tools) ----------
   const client = new OpenAI({ apiKey, baseURL: GROQ_BASE_URL });
 
+  // Carrega a base de conhecimento comercial (procedimentos do SharePoint),
+  // se existir, e anexa ao system prompt — assim o assistente responde
+  // conforme os processos oficiais da ELO.
+  let systemPrompt = SYSTEM_PROMPT;
+  try {
+    const { data: conhec } = await supabase
+      .from("conhecimento_comercial")
+      .select("conteudo,fonte")
+      .eq("id", "procedimentos-comerciais")
+      .maybeSingle();
+    if (conhec?.conteudo) {
+      systemPrompt +=
+        `\n\n## Procedimentos comerciais oficiais da ELO (fonte: ${conhec.fonte || "base interna"})\n` +
+        `Use este material como a referência oficial para responder dúvidas de processo, ` +
+        `procedimento e padrão de resposta do time. Quando a pergunta for coberta aqui, ` +
+        `siga exatamente o que está escrito; se algo não estiver coberto, diga que não consta ` +
+        `nos procedimentos e não invente.\n\n` +
+        conhec.conteudo;
+    }
+  } catch {
+    // base de conhecimento indisponível — segue só com o prompt padrão
+  }
+
   const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-    { role: "system", content: SYSTEM_PROMPT },
+    { role: "system", content: systemPrompt },
     ...historico.map((m) => ({ role: m.role, content: m.content })),
   ];
 
