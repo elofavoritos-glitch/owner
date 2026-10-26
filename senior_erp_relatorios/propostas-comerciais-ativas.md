@@ -10,7 +10,9 @@ Número · Emissão · CNPJ do cliente · Descrição do cliente · Despachante 
 - ✅ **E120PED** — dados gerais do pedido/proposta
   - ✅ `NUMPED` — número do pedido (variável de regra `VSNumero`)
   - ✅ `SITPED` — **situação** do pedido. Valores confirmados: `1` = aberto/normal · `5` = cancelado · `9` = em edição (transitório)
-  - ⚠️ `DATEMI` — data de emissão (padrão provável)
+  - ✅ `TIPPED` — **tipo** do pedido. Valor confirmado: `5` = Previsão. (No Senior, orçamento/proposta costuma ser um **tipo** de pedido — confirme na base qual tipo sua empresa usa para "proposta comercial".)
+  - ✅ campo de **data de emissão existe nos dados gerais** (confirmado na doc; distinção data de fechamento `F` vs. emissão `E` via `VSOpcEmi`). ⚠️ nome técnico literal a confirmar (`DATEMI` vs `DATPED`).
+  - ✅ `PRCPED` — procedência do pedido
   - ⚠️ `CODCLI`, `CODREP`, `CODDPC` — chaves para cliente/representante/despachante
 - ✅ **E085CLI** — cadastro de clientes
   - ✅ `CGCCPF` — CNPJ/CPF
@@ -39,10 +41,9 @@ WHERE PED.SITPED = 1                                          -- ✅ 1 = aberto/
 ORDER BY PED.NUMPED;
 ```
 
-### Observação sobre "ativas"
-"Proposta ativa" = `SITPED = 1` (aberto). Se você considerar também pedidos liberados/em
-andamento como "ativos", ajuste o filtro (ex.: `SITPED IN (1, ...)`). Canceladas (`5`) e o
-estado transitório (`9`) ficam de fora.
+### Observação sobre "ativas" e "proposta"
+- **Ativa** = `SITPED = 1` (aberto). Canceladas (`5`) e estado transitório (`9`) ficam de fora. Se "ativa" incluir liberados/em andamento, use `SITPED IN (1, ...)`.
+- **Proposta**: no Senior, orçamento/proposta geralmente é um **tipo de pedido** (`TIPPED`). Se sua empresa separa proposta de pedido firme por tipo, adicione o filtro `AND PED.TIPPED = <tipo da proposta>` (confirme o valor na base — `5` é Previsão).
 
 ### Pontos a confirmar na base (ou com o suporte Senior)
 1. Nome do campo de **data de emissão** em E120PED (`DATEMI` vs `DATPED`).
