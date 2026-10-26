@@ -1,40 +1,54 @@
 # Relatório: Propostas Comerciais Ativas — Senior Gestão Empresarial | ERP 5.10.4
 
 > Especificação pronta para montar no **Gerador de Relatórios** da Senior e salvar como `.GER`.
-> Nomes de tabelas/campos marcados com ✅ foram verificados na documentação oficial 5.10.4; os marcados com ⚠️ são padrão provável da Senior e devem ser confirmados na sua base.
+> ✅ = verificado na documentação oficial 5.10.4 · ⚠️ = padrão provável, confirmar na base.
 
 ## Colunas pedidas
 Número · Emissão · CNPJ do cliente · Descrição do cliente · Despachante · Representante
 
-## Tabelas (verificadas na documentação oficial)
-- ✅ **E120PED** — dados gerais do pedido/proposta (campo ✅ `NUMPED` = número do pedido)
-- ✅ **E085CLI** — cadastro de clientes (✅ `CGCCPF` = CNPJ/CPF; `CODCLI` = código)
-- ✅ **E090REP** — representantes (tela `F090REP`)
-- ⚠️ **E130DPC / E085DPC** — despachante (a confirmar o nome real na base)
+## Tabelas e campos (verificados na documentação oficial)
+- ✅ **E120PED** — dados gerais do pedido/proposta
+  - ✅ `NUMPED` — número do pedido (variável de regra `VSNumero`)
+  - ✅ `SITPED` — **situação** do pedido. Valores confirmados: `1` = aberto/normal · `5` = cancelado · `9` = em edição (transitório)
+  - ⚠️ `DATEMI` — data de emissão (padrão provável)
+  - ⚠️ `CODCLI`, `CODREP`, `CODDPC` — chaves para cliente/representante/despachante
+- ✅ **E085CLI** — cadastro de clientes
+  - ✅ `CGCCPF` — CNPJ/CPF
+  - ⚠️ `NOMCLI` — nome/descrição do cliente
+  - ✅ `CODCLI` — código
+- ✅ **E090REP** — representantes (tela `F090REP`) · ⚠️ `NOMREP`
+- ⚠️ **E075DPC / E130DPC** — despachante (comum em pedidos de exportação; confirmar nome na base)
+
+> Notação `TABELA.CAMPO` confirmada na doc (ex.: `E120IPD.CODAGC`, `E075PRO.CODAGC`, `E120PED.PRCPED`).
 
 ## SQL (SQL Senior) — colar na fonte de dados do modelo
 
 ```sql
 SELECT
     PED.NUMPED                 AS NUMERO,        -- ✅ número da proposta/pedido
-    PED.DATEMI                 AS EMISSAO,       -- ⚠️ data de emissão (confirmar: DATEMI/DATPED)
+    PED.DATEMI                 AS EMISSAO,       -- ⚠️ data de emissão (confirmar DATEMI/DATPED)
     CLI.CGCCPF                 AS CNPJ,          -- ✅ CNPJ/CPF do cliente
-    CLI.NOMCLI                 AS CLIENTE,       -- ⚠️ nome/descrição do cliente (confirmar NOMCLI/NOMFAN)
+    CLI.NOMCLI                 AS CLIENTE,       -- ⚠️ nome/descrição do cliente
     DPC.NOMDPC                 AS DESPACHANTE,   -- ⚠️ nome do despachante (confirmar tabela/campo)
-    REP.NOMREP                 AS REPRESENTANTE  -- ⚠️ nome do representante (confirmar NOMREP)
+    REP.NOMREP                 AS REPRESENTANTE  -- ⚠️ nome do representante
 FROM E120PED PED
     INNER JOIN E085CLI CLI ON CLI.CODCLI = PED.CODCLI          -- ⚠️ confirmar PED.CODCLI
     LEFT  JOIN E090REP REP ON REP.CODREP = PED.CODREP          -- ⚠️ confirmar PED.CODREP
-    LEFT  JOIN E130DPC DPC ON DPC.CODDPC = PED.CODDPC          -- ⚠️ despachante (confirmar)
-WHERE PED.SITPED = 'A'                                         -- ⚠️ situação Ativa/Aberta (confirmar domínio)
+    LEFT  JOIN E075DPC DPC ON DPC.CODDPC = PED.CODDPC          -- ⚠️ despachante (confirmar)
+WHERE PED.SITPED = 1                                          -- ✅ 1 = aberto/ativo (exclui cancelado=5)
 ORDER BY PED.NUMPED;
 ```
 
-### Pontos a confirmar na sua base (ou pergunte ao suporte Senior)
-1. Campo de **data de emissão** em E120PED (provável `DATEMI` ou `DATPED`).
-2. Campo de **situação** e qual valor significa "ativa"/"aberta" (`SITPED`).
-3. **Despachante**: tabela e campo corretos (varia bastante por instalação).
-4. Campo de **nome do cliente** (`NOMCLI` vs. razão/fantasia).
+### Observação sobre "ativas"
+"Proposta ativa" = `SITPED = 1` (aberto). Se você considerar também pedidos liberados/em
+andamento como "ativos", ajuste o filtro (ex.: `SITPED IN (1, ...)`). Canceladas (`5`) e o
+estado transitório (`9`) ficam de fora.
+
+### Pontos a confirmar na base (ou com o suporte Senior)
+1. Nome do campo de **data de emissão** em E120PED (`DATEMI` vs `DATPED`).
+2. Tabela/campo do **despachante** (varia por instalação; comum em exportação).
+3. Campo de **nome do cliente** (`NOMCLI` vs razão/fantasia).
+4. Se "ativa" deve incluir outras situações além de `1`.
 
 ## Estrutura das seções do modelo
 | Seção | Conteúdo |
@@ -55,4 +69,6 @@ ORDER BY PED.NUMPED;
 8. Menu **Modelo > Salvar** → nomeie no padrão **CATNNN.GER**.
 9. **Teste em homologação** e confira os números.
 
-> Observação técnica: o arquivo `.GER` é o modelo binário proprietário da ferramenta Senior (cabeçalho + versão TBS + corpo codificado). Ele só é gerado válido ao salvar dentro do próprio Gerador de Relatórios — não é produzível como texto por fora. Esta especificação entrega tudo que automatiza o trabalho até o "Salvar".
+> O arquivo `.GER` é o modelo binário proprietário da Senior (cabeçalho + versão TBS + corpo
+> codificado) e só é gerado válido ao salvar dentro do próprio Gerador de Relatórios — não é
+> produzível como texto por fora. Esta especificação cobre todo o trabalho até o "Salvar".
