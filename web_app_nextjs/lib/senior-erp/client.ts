@@ -43,6 +43,11 @@ export type SeniorConfig = {
   password?: string; // modo "password"
   accessKey?: string; // modo "key"
   secret?: string;    // modo "key"
+  // Parâmetros para chamadas SOAP de web services G5 (ex.: cadastro de clientes).
+  // `soapExec` é o sistema (ex.: "sapiens"); `soapUser` é o usuário do envelope.
+  // Defaults: soapExec="sapiens", soapUser = username (sem o @tenant).
+  soapExec?: string;
+  soapUser?: string;
 };
 
 const DEFAULT_BASE_URL = "https://api.senior.com.br";
@@ -67,6 +72,8 @@ export function lerConfig(env: EnvVars = process.env): SeniorConfig | null {
   const baseUrl = (env.SENIOR_API_BASE_URL || DEFAULT_BASE_URL).trim().replace(/\/+$/, "");
   const authPathEnv = (env.SENIOR_AUTH_PATH || "").trim();
   const clientId = (env.SENIOR_CLIENT_ID || "").trim() || undefined;
+  const soapExec = (env.SENIOR_SOAP_EXEC || "").trim() || "sapiens";
+  const soapUser = (env.SENIOR_SOAP_USER || "").trim() || undefined;
 
   const username = (env.SENIOR_USERNAME || "").trim();
   const password = (env.SENIOR_PASSWORD || "").trim();
@@ -81,6 +88,8 @@ export function lerConfig(env: EnvVars = process.env): SeniorConfig | null {
       authMode: "password",
       tenant,
       clientId,
+      soapExec,
+      soapUser: soapUser || username.split("@")[0] || username,
       username,
       password,
     };
@@ -93,6 +102,8 @@ export function lerConfig(env: EnvVars = process.env): SeniorConfig | null {
       authMode: "key",
       tenant,
       clientId,
+      soapExec,
+      soapUser,
       accessKey,
       secret,
     };
@@ -273,6 +284,88 @@ export class SeniorClient {
       return { ok: false, erro: `Falha ao chamar a API Senior X (${descreverErroRede(e)}).` };
     }
   }
+
+  /**
+   * Chama um web service SOAP G5 (ex.: cadastro de clientes), autenticado com o
+   * token da Senior X no header Authorization. Monta o envelope `<a:run>`
+   * conforme a doc oficial (Autenticação de web services via token Senior X).
+   *
+   * @param servico  nome do serviço G5, ex.: "com.senior.g5.co.cad.clientes"
+   * @param porta    porta/operação, ex.: "exportar"
+   * @param paramsXml XML interno de <params> (campos específicos da porta)
+   * @param soapPath path do endpoint SOAP (default segue o padrão sapiens_Sync<servico>)
+   * Retorna o corpo XML cru da resposta (o parsing fica a cargo do chamador).
+   */
+  async chamarSoap(
+    servico: string,
+    porta: string,
+    paramsXml = "",
+    opts: { soapPath?: string; timeoutMs?: number } = {},
+  ): Promise<SeniorResposta<string>> {
+    const auth = await this.autenticar();
+    if (!auth.ok) return auth;
+
+    const exec = this.cfg.soapExec || "sapiens";
+    const user = this.cfg.soapUser || this.cfg.username?.split("@")[0] || "";
+    // Padrão do endpoint G5: <exec>_Sync<servico_com_underscores>
+    const servicoPath = servico.replace(/\./g, "_");
+    const soapPath = opts.soapPath || `/g5-senior-services/${exec}_Sync${servicoPath}`;
+
+    const envelope =
+      `<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/" xmlns:a="http://services.senior.com.br">` +
+      `<S:Body><a:run>` +
+      `<exec>${exec}</exec><user>${escXml(user)}</user>` +
+      `<key>${escXml(servico)}@${escXml(porta)}</key>` +
+      `<parent></parent><lot>0</lot>` +
+      `<parameters>&lt;request&gt;${paramsXml}&lt;/request&gt;</parameters>` +
+      `</a:run></S:Body></S:Envelope>`;
+
+    const fazer = async (token: string): Promise<Response> => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? 30_000);
+      try {
+        return await this.fetchImpl(`${this.cfg.baseUrl}${soapPath}`, {
+          method: "POST",
+          headers: this.headersBase({
+            Authorization: token,
+            "Content-Type": "text/xml; charset=utf-8",
+            Accept: "text/xml",
+            SOAPAction: "run",
+          }),
+          body: envelope,
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timer);
+      }
+    };
+
+    try {
+      let resp = await fazer(auth.dados.token);
+      if (resp.status === 401) {
+        const renovado = await this.autenticar(true);
+        if (!renovado.ok) return renovado;
+        resp = await fazer(renovado.dados.token);
+      }
+      const txt = await resp.text();
+      if (!resp.ok) {
+        return { ok: false, status: resp.status, erro: traduzErroChamada(resp.status, (txt || "").slice(0, 200)) };
+      }
+      // Falhas SOAP vêm com 200 + <faultstring> no corpo.
+      const fault = /<faultstring>([\s\S]*?)<\/faultstring>/i.exec(txt);
+      if (fault) return { ok: false, status: resp.status, erro: `Falha SOAP Senior: ${fault[1].trim()}` };
+      return { ok: true, dados: txt, status: resp.status };
+    } catch (e) {
+      return { ok: false, erro: `Falha ao chamar web service Senior (${descreverErroRede(e)}).` };
+    }
+  }
+}
+
+/** Escapa caracteres especiais de XML (a doc alerta: eles quebram o parser). */
+function escXml(s: string): string {
+  return String(s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 }
 
 // ----- Helpers de erro (mensagens em linguagem clara, como nos demais serviços) -----
