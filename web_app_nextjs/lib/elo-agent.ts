@@ -1,6 +1,6 @@
 // Configuração do agente comercial da ELO para o chat (Claude / Anthropic).
 // System prompt baseado nas regras do agente de inteligência comercial
-// (elo-inteligencia-comercial-logistica.md) + definição das ferramentas que
+// (legacy/elo-inteligencia-comercial-logistica.md) + definição das ferramentas que
 // expõem a inteligência determinística (lib/elo-intelligence.ts).
 import type OpenAI from "openai";
 import { EMPRESA, ICP, PESOS_SCORE, ROTEIRO_DIAGNOSTICO } from "./elo-intelligence";
