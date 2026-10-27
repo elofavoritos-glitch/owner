@@ -20,34 +20,77 @@
 //   Nunca inventar endpoint/campo: na dúvida, confirmar na documentação oficial.
 
 // ----- Configuração via ambiente (segredos nunca ficam no repo) -----
+// A Plataforma Senior X suporta duas formas de autenticação servidor-a-servidor:
+//   - "password": login com USUÁRIO + SENHA (primitiva `login`).
+//   - "key":      login com CHAVE + SEGREDO (primitiva `loginWithKey`).
+// O modo é escolhido automaticamente pelas variáveis presentes (ver lerConfig):
+// se houver SENIOR_USERNAME + SENIOR_PASSWORD usa "password"; senão, se houver
+// SENIOR_ACCESS_KEY + SENIOR_SECRET usa "key".
+export type SeniorAuthMode = "password" | "key";
+
 export type SeniorConfig = {
   baseUrl: string;   // ex.: https://api.senior.com.br
-  authPath: string;  // ex.: /platform/authentication/actions/loginWithKey
-  accessKey: string; // Chave de Aplicação (access key)
-  secret: string;    // Segredo da Chave de Aplicação
+  authPath: string;  // path da primitiva de autenticação
+  authMode: SeniorAuthMode;
   tenant: string;    // domínio do tenant (ex.: suaempresa.com.br)
+  // credenciais (preenchidas conforme o modo)
+  username?: string; // modo "password"
+  password?: string; // modo "password"
+  accessKey?: string; // modo "key"
+  secret?: string;    // modo "key"
 };
 
 const DEFAULT_BASE_URL = "https://api.senior.com.br";
-// Default segue o padrão público da plataforma; confirme o path no seu tenant.
-const DEFAULT_AUTH_PATH = "/platform/authentication/actions/loginWithKey";
+// Defaults seguem o padrão público da plataforma; confirme o path no seu tenant.
+// Cada primitiva tem seu endpoint próprio.
+const DEFAULT_AUTH_PATH_PASSWORD = "/platform/authentication/actions/login";
+const DEFAULT_AUTH_PATH_KEY = "/platform/authentication/actions/loginWithKey";
 
 /** Fonte de variáveis de ambiente (compatível com process.env). */
 export type EnvVars = Record<string, string | undefined>;
 
-/** Lê a configuração do ambiente. Retorna null se faltar algo essencial. */
+/**
+ * Lê a configuração do ambiente e detecta o modo de autenticação.
+ * Prioriza usuário/senha (modo "password") quando ambos estão presentes;
+ * do contrário, usa chave/segredo (modo "key"). Retorna null se nenhum par
+ * de credenciais estiver completo (ou faltar o tenant).
+ */
 export function lerConfig(env: EnvVars = process.env): SeniorConfig | null {
+  const tenant = (env.SENIOR_TENANT || "").trim();
+  if (!tenant) return null;
+
+  const baseUrl = (env.SENIOR_API_BASE_URL || DEFAULT_BASE_URL).trim().replace(/\/+$/, "");
+  const authPathEnv = (env.SENIOR_AUTH_PATH || "").trim();
+
+  const username = (env.SENIOR_USERNAME || "").trim();
+  const password = (env.SENIOR_PASSWORD || "").trim();
   const accessKey = (env.SENIOR_ACCESS_KEY || "").trim();
   const secret = (env.SENIOR_SECRET || "").trim();
-  const tenant = (env.SENIOR_TENANT || "").trim();
-  if (!accessKey || !secret || !tenant) return null;
-  return {
-    baseUrl: (env.SENIOR_API_BASE_URL || DEFAULT_BASE_URL).trim().replace(/\/+$/, ""),
-    authPath: (env.SENIOR_AUTH_PATH || DEFAULT_AUTH_PATH).trim(),
-    accessKey,
-    secret,
-    tenant,
-  };
+
+  // Modo usuário/senha tem prioridade quando informado por completo.
+  if (username && password) {
+    return {
+      baseUrl,
+      authPath: authPathEnv || DEFAULT_AUTH_PATH_PASSWORD,
+      authMode: "password",
+      tenant,
+      username,
+      password,
+    };
+  }
+
+  if (accessKey && secret) {
+    return {
+      baseUrl,
+      authPath: authPathEnv || DEFAULT_AUTH_PATH_KEY,
+      authMode: "key",
+      tenant,
+      accessKey,
+      secret,
+    };
+  }
+
+  return null;
 }
 
 // ----- Tipos de retorno (mesmo estilo dos demais serviços externos do projeto) -----
@@ -74,7 +117,8 @@ export class SeniorClient {
     const cfg = lerConfig(env);
     if (!cfg) {
       throw new Error(
-        "Integração Senior X indisponível: defina SENIOR_ACCESS_KEY, SENIOR_SECRET e SENIOR_TENANT.",
+        "Integração Senior X indisponível: defina SENIOR_TENANT e um par de credenciais — " +
+          "SENIOR_USERNAME + SENIOR_PASSWORD (usuário/senha) ou SENIOR_ACCESS_KEY + SENIOR_SECRET (chave).",
       );
     }
     return new SeniorClient(cfg, fetchImpl);
@@ -86,8 +130,21 @@ export class SeniorClient {
   }
 
   /**
-   * Autentica via loginWithKey e devolve o token (usando cache quando válido).
-   * `forcar` ignora o cache (usado ao receber 401 numa chamada).
+   * Monta o corpo da requisição de autenticação conforme o modo configurado:
+   *   - "password": { username, password }  (primitiva `login`)
+   *   - "key":      { access_key, secret }  (primitiva `loginWithKey`)
+   */
+  private corpoAutenticacao(): Record<string, string> {
+    if (this.cfg.authMode === "password") {
+      return { username: this.cfg.username ?? "", password: this.cfg.password ?? "" };
+    }
+    return { access_key: this.cfg.accessKey ?? "", secret: this.cfg.secret ?? "" };
+  }
+
+  /**
+   * Autentica na plataforma (via `login` com usuário/senha, ou `loginWithKey`
+   * com chave/segredo, conforme a config) e devolve o token (cacheado enquanto
+   * válido). `forcar` ignora o cache (usado ao receber 401 numa chamada).
    */
   async autenticar(forcar = false, timeoutMs = 20_000): Promise<SeniorResposta<{ token: string }>> {
     if (!forcar && this.tokenValido()) {
@@ -104,7 +161,7 @@ export class SeniorClient {
           "Content-Type": "application/json",
           Accept: "application/json",
         },
-        body: JSON.stringify({ access_key: this.cfg.accessKey, secret: this.cfg.secret }),
+        body: JSON.stringify(this.corpoAutenticacao()),
         signal: controller.signal,
       });
 
@@ -207,7 +264,7 @@ function pegarDetalhe(json: Record<string, unknown> | null, bruto: string): stri
 
 function traduzErroAuth(status: number, detalhe: string): string {
   if (status === 400 || status === 401) {
-    return "Credenciais Senior X inválidas (access key/secret/tenant). Verifique a Chave de Aplicação.";
+    return "Credenciais Senior X inválidas (usuário/senha ou chave/segredo, e tenant). Verifique as credenciais informadas.";
   }
   if (status === 403) return "Sem permissão para autenticar na Senior X com esta chave.";
   if (status === 404) return "Endpoint de autenticação Senior X não encontrado. Confirme SENIOR_AUTH_PATH.";

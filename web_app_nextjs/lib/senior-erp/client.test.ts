@@ -4,8 +4,18 @@ import { SeniorClient, lerConfig, type SeniorConfig } from "./client";
 const cfg: SeniorConfig = {
   baseUrl: "https://api.senior.com.br",
   authPath: "/platform/authentication/actions/loginWithKey",
+  authMode: "key",
   accessKey: "ak_test",
   secret: "sk_test",
+  tenant: "empresa.com.br",
+};
+
+const cfgPassword: SeniorConfig = {
+  baseUrl: "https://api.senior.com.br",
+  authPath: "/platform/authentication/actions/login",
+  authMode: "password",
+  username: "usuario@empresa",
+  password: "senha-secreta",
   tenant: "empresa.com.br",
 };
 
@@ -20,19 +30,42 @@ function resp(status: number, body: unknown): Response {
 }
 
 describe("lerConfig", () => {
-  it("retorna null quando faltam credenciais", () => {
+  it("retorna null quando falta o tenant", () => {
     expect(lerConfig({})).toBeNull();
     expect(lerConfig({ SENIOR_ACCESS_KEY: "x", SENIOR_SECRET: "y" })).toBeNull();
   });
 
-  it("monta a config com defaults quando só o essencial é informado", () => {
+  it("retorna null quando o tenant existe mas nenhum par de credenciais está completo", () => {
+    expect(lerConfig({ SENIOR_TENANT: "t", SENIOR_USERNAME: "u" })).toBeNull();
+    expect(lerConfig({ SENIOR_TENANT: "t", SENIOR_ACCESS_KEY: "x" })).toBeNull();
+  });
+
+  it("usa modo 'password' com usuário/senha e o endpoint login", () => {
+    const c = lerConfig({
+      SENIOR_USERNAME: "u@e", SENIOR_PASSWORD: "p", SENIOR_TENANT: "t.com.br",
+    });
+    expect(c).not.toBeNull();
+    expect(c!.authMode).toBe("password");
+    expect(c!.authPath).toBe("/platform/authentication/actions/login");
+    expect(c!.username).toBe("u@e");
+    expect(c!.password).toBe("p");
+  });
+
+  it("usa modo 'key' com chave/segredo e o endpoint loginWithKey", () => {
     const c = lerConfig({
       SENIOR_ACCESS_KEY: "ak", SENIOR_SECRET: "sk", SENIOR_TENANT: "t.com.br",
     });
-    expect(c).not.toBeNull();
-    expect(c!.baseUrl).toBe("https://api.senior.com.br");
+    expect(c!.authMode).toBe("key");
     expect(c!.authPath).toContain("loginWithKey");
-    expect(c!.tenant).toBe("t.com.br");
+  });
+
+  it("dá prioridade a usuário/senha quando ambos os pares estão presentes", () => {
+    const c = lerConfig({
+      SENIOR_USERNAME: "u", SENIOR_PASSWORD: "p",
+      SENIOR_ACCESS_KEY: "ak", SENIOR_SECRET: "sk",
+      SENIOR_TENANT: "t",
+    });
+    expect(c!.authMode).toBe("password");
   });
 
   it("remove barra final da baseUrl customizada", () => {
@@ -41,6 +74,14 @@ describe("lerConfig", () => {
       SENIOR_API_BASE_URL: "https://custom.senior.com.br/",
     });
     expect(c!.baseUrl).toBe("https://custom.senior.com.br");
+  });
+
+  it("SENIOR_AUTH_PATH explícito sobrepõe o default do modo", () => {
+    const c = lerConfig({
+      SENIOR_USERNAME: "u", SENIOR_PASSWORD: "p", SENIOR_TENANT: "t",
+      SENIOR_AUTH_PATH: "/custom/auth",
+    });
+    expect(c!.authPath).toBe("/custom/auth");
   });
 });
 
@@ -58,6 +99,21 @@ describe("SeniorClient.autenticar", () => {
     expect(url).toBe("https://api.senior.com.br/platform/authentication/actions/loginWithKey");
     expect(init.method).toBe("POST");
     expect(JSON.parse(init.body)).toMatchObject({ access_key: "ak_test", secret: "sk_test" });
+  });
+
+  it("no modo password, envia username/senha para o endpoint login", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(resp(200, { access_token: "tok-pw", expires_in: 3600 }));
+    const client = new SeniorClient(cfgPassword, fetchMock as unknown as typeof fetch);
+
+    const r = await client.autenticar();
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.dados.token).toBe("tok-pw");
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://api.senior.com.br/platform/authentication/actions/login");
+    expect(JSON.parse(init.body)).toMatchObject({ username: "usuario@empresa", password: "senha-secreta" });
+    // não deve vazar chaves no corpo
+    expect(init.body).not.toContain("access_key");
   });
 
   it("reusa o token em cache (não autentica de novo)", async () => {
