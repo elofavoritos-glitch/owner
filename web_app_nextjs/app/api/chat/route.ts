@@ -8,6 +8,7 @@ import OpenAI from "openai";
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
 import { SYSTEM_PROMPT, TOOLS } from "@/lib/elo-agent";
+import { isToolName, type ToolName } from "@/lib/tool-names";
 import {
   montarDossie, analisarDiagnostico, calcularScore, classificarRelacionamento,
   type Evidencias, type Interacao,
@@ -65,7 +66,7 @@ function limparFiltros(obj: Record<string, unknown>): Record<string, unknown> {
 // Executa uma ferramenta chamada pelo modelo. Retorna texto (JSON) do resultado.
 // Recebe o usuário logado para gravações (nunca confia no LLM para o responsável).
 async function executarTool(
-  nome: string,
+  nome: ToolName,
   input: Record<string, unknown>,
   user: { id: string; email?: string },
 ): Promise<string> {
@@ -380,10 +381,18 @@ async function executarTool(
       if (error) return JSON.stringify({ erro: error.message });
       return JSON.stringify({ total: data?.length ?? 0, oportunidades: data ?? [] });
     }
-    return JSON.stringify({ erro: `Ferramenta desconhecida: ${nome}` });
+    // Exaustividade: se um novo ToolName for adicionado sem um ramo acima,
+    // o TypeScript acusa aqui (nome deixa de ser atribuível a `never`).
+    return exaustividadeTool(nome);
   } catch (e) {
     return JSON.stringify({ erro: e instanceof Error ? e.message : String(e) });
   }
+}
+
+// Alcançada apenas se algum ToolName ficar sem ramo em executarTool.
+// O parâmetro `never` força erro de compilação nesse caso.
+function exaustividadeTool(nome: never): string {
+  return JSON.stringify({ erro: `Ferramenta desconhecida: ${String(nome)}` });
 }
 
 export async function POST(request: Request) {
@@ -479,7 +488,10 @@ export async function POST(request: Request) {
           } catch {
             args = {};
           }
-          const out = await executarTool(tc.function.name, args, { id: user.id, email: user.email ?? undefined });
+          const nomeTool = tc.function.name;
+          const out = isToolName(nomeTool)
+            ? await executarTool(nomeTool, args, { id: user.id, email: user.email ?? undefined })
+            : JSON.stringify({ erro: `Ferramenta desconhecida: ${nomeTool}` });
           messages.push({ role: "tool", tool_call_id: tc.id, content: out });
         }
         continue;
