@@ -32,6 +32,21 @@
       referenciador/HTTP se aplicável), **ou** gerar uma nova restrita e
       atualizar `GOOGLE_TTS_API_KEY` na Vercel, revogando a antiga.
 
+- [ ] **Senha e sessões do usuário de integração Senior X** (`intapi@elo.log.br`,
+  tenant `elo.log.br`) — **PRIORIDADE ALTA**
+  - A senha foi exposta em chat durante o desenvolvimento e **tokens de sessão
+    (access/refresh) também vazaram** num teste de autenticação.
+  - Ações:
+    1. **Trocar a senha** do `intapi` na Plataforma Senior X
+       (Tecnologia → Gestão de Usuários). Atualizar `SENIOR_PASSWORD` só por
+       variável de ambiente (Vercel/Supabase), nunca no repositório.
+    2. **Invalidar as sessões ativas** do usuário para matar os tokens vazados
+       (eles valem ~7 dias: `expires_in` 604800s).
+    3. Ideal: usar um usuário de **integração dedicado**, com permissão mínima
+       (só os recursos/endpoints que a aplicação consome).
+  - Obs.: `username` correto é **qualificado** (`intapi@elo.log.br`); `SENIOR_CLIENT_ID`
+    (do app no portal dev.senior.com.br) é recomendado para as chamadas de negócio.
+
 ## Boa prática daqui pra frente
 - Nunca colar segredos no chat/assistente nem em arquivos versionados.
 - Toda chave vive só em **variáveis de ambiente** (Vercel/Supabase), nunca no
