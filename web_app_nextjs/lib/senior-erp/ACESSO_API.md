@@ -17,27 +17,33 @@ endpoints triviais (ex.: `getLoggedUser`). Ou seja, **o bloqueio é de aplicaç�
 permissão**, não de endpoint específico. No host `api.senior.com.br` as rotas de
 negócio dão `404 "Could not route request"` (host errado para elas).
 
-## ✅ Como liberar — passo a passo oficial (portal XPlatform API)
+## ✅ Como liberar — caminho ATUAL (dentro do Senior X web)
 
-> Fonte oficial Senior: o erro de rota bloqueada / client_id inválido ocorre
-> quando o `client_id` **não tem as APIs liberadas**. A solução é criar o app e
-> **marcar as APIs disponíveis**. (reformulado p/ conformidade —
-> https://suporte.senior.com.br/hc/pt-br/articles/29792064550676)
+> O portal de desenvolvedor antigo (`dev.senior.com.br` → Dev Tools/Minhas Apps)
+> está obsoleto. O caminho atual é **dentro do próprio Senior X**, logado como
+> admin do tenant. Fonte oficial (reformulado p/ conformidade):
+> https://documentacao.senior.com.br/seniorxplatform/manual-do-usuario/hcm/integrador-sst/desenvolvedores/ambiente-de-testes-para-homologacao.htm
 
-1. Acesse o **portal XPlatform API** (`dev.senior.com.br` → portal de APIs) e faça
-   **login** com as credenciais da conta Senior da ELO.
-2. Clique em **Minha conta**.
-3. No menu, vá em **Dev Tools / Minhas Apps**.
-4. **Crie um aplicativo** (ou abra um existente) — ele gera o **`client_id`**
-   (e, se oferecido, uma **chave de aplicação**: access key + secret).
-5. Clique no **nome do aplicativo** e vá na seção **"APIs disponíveis"**.
-6. **Selecione as APIs** que o relatório consome (ou todas as disponíveis) e salve.
-7. Copie o **`client_id`** do app.
+### Passo 1 — Criar a aplicação e gerar a chave (access_key + secret)
+No Senior X (`platform.senior.com.br`), logado com usuário **admin**:
+1. Acesse **Tecnologia → Administração → Gerenciamento de aplicações**.
+2. Clique em **Nova aplicação** e preencha **Nome** e **Descrição**
+   (ex.: nome `integracao-painel-elo`).
+3. Ao lado da aplicação criada, clique em **Ações → Gerenciar chaves**.
+4. Clique em **Gerar Chave** → gera a **Chave de Acesso** (access_key) e o
+   **Secret** (a "senha do token"). **Copie os dois.**
 
-### Se o tenant `elo.log.br` usar autenticação federada (SAML/ADFS)
-O login direto por usuário/senha não basta para a API. Nesse caso, no mesmo
-gerenciamento de aplicações, gere uma **Chave de Aplicação** (access key +
-secret) — o cliente já suporta esse modo (`loginWithKey`).
+> Essas duas chaves alimentam `SENIOR_ACCESS_KEY` + `SENIOR_SECRET` no nosso
+> cliente (modo `loginWithKey`) — dispensa usuário/senha e o portal de dev.
+
+### Passo 2 — Dar permissão à aplicação (libera o "route blocked")
+1. Acesse **Tecnologia → Administração → Autorização → Gestão de Papéis**.
+2. Selecione o **papel** adequado, abra a aba **Aplicações** e **ative** a
+   aplicação criada (e os recursos/APIs do ERP que serão consumidos).
+
+### Se não aparecer o menu "Tecnologia"
+O usuário logado não é admin do tenant. Nesse caso, quem tem o papel admin faz
+os passos acima, ou abra chamado no suporte (ver CHAMADO_SUPORTE.md).
 
 ## Pré-requisito adicional: "proprietária" (licença do WS de clientes)
 Além de passar pelo gateway, o web service `com.senior.g5.co.cad.clientes`
