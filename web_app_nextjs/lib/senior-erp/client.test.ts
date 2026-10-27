@@ -222,6 +222,16 @@ describe("SeniorClient.chamar", () => {
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.erro).toMatch(/permiss|escopo/i);
   });
+
+  it("orienta a liberar as APIs do app quando o gateway bloqueia a rota", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(resp(200, { access_token: "t", expires_in: 3600 }))
+      .mockResolvedValueOnce(resp(403, { message: "Request blocked by the administrator - route blocked" }));
+    const client = new SeniorClient(cfg, fetchMock as unknown as typeof fetch);
+    const r = await client.chamar("/erp/clientes");
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.erro).toMatch(/APIs disponíveis|liberad/i);
+  });
 });
 
 describe("SeniorClient client_id (header exigido pelo gateway)", () => {

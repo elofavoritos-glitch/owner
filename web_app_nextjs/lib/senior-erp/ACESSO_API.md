@@ -17,19 +17,27 @@ endpoints triviais (ex.: `getLoggedUser`). Ou seja, **o bloqueio é de aplicaç�
 permissão**, não de endpoint específico. No host `api.senior.com.br` as rotas de
 negócio dão `404 "Could not route request"` (host errado para elas).
 
-## O que o admin do Senior precisa fazer (portal dev.senior.com.br)
-Conforme a documentação oficial da Senior (fórum/portal do desenvolvedor):
+## ✅ Como liberar — passo a passo oficial (portal XPlatform API)
 
-1. **Criar uma Aplicação** no portal do desenvolvedor / Gerenciamento de Aplicações
-   da plataforma → obter o **`client_id`**.
-2. **Habilitar na Aplicação** o uso dos serviços/APIs necessários (autenticação e
-   as APIs do ERP que o relatório consome) e **liberar a rota** (tirar o
-   "route blocked").
-3. Enviar o **`client_id`** no header de todas as requisições (o cliente já faz
-   isso quando `SENIOR_CLIENT_ID` está definido).
-4. **Se o tenant usar autenticação federada (SAML/ADFS)**: o login direto por
-   usuário/senha não basta — gerar uma **Chave de Aplicação** (access key +
-   secret). O cliente já suporta esse modo (`loginWithKey`).
+> Fonte oficial Senior: o erro de rota bloqueada / client_id inválido ocorre
+> quando o `client_id` **não tem as APIs liberadas**. A solução é criar o app e
+> **marcar as APIs disponíveis**. (reformulado p/ conformidade —
+> https://suporte.senior.com.br/hc/pt-br/articles/29792064550676)
+
+1. Acesse o **portal XPlatform API** (`dev.senior.com.br` → portal de APIs) e faça
+   **login** com as credenciais da conta Senior da ELO.
+2. Clique em **Minha conta**.
+3. No menu, vá em **Dev Tools / Minhas Apps**.
+4. **Crie um aplicativo** (ou abra um existente) — ele gera o **`client_id`**
+   (e, se oferecido, uma **chave de aplicação**: access key + secret).
+5. Clique no **nome do aplicativo** e vá na seção **"APIs disponíveis"**.
+6. **Selecione as APIs** que o relatório consome (ou todas as disponíveis) e salve.
+7. Copie o **`client_id`** do app.
+
+### Se o tenant `elo.log.br` usar autenticação federada (SAML/ADFS)
+O login direto por usuário/senha não basta para a API. Nesse caso, no mesmo
+gerenciamento de aplicações, gere uma **Chave de Aplicação** (access key +
+secret) — o cliente já suporta esse modo (`loginWithKey`).
 
 ## Como ligar no código depois de liberado
 Definir as variáveis de ambiente (Vercel/Supabase — nunca no repo):
