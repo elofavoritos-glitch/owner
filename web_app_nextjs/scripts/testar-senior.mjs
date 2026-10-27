@@ -26,6 +26,7 @@ const USERNAME = (process.env.SENIOR_USERNAME || "").trim();
 const PASSWORD = (process.env.SENIOR_PASSWORD || "").trim();
 const ACCESS_KEY = (process.env.SENIOR_ACCESS_KEY || "").trim();
 const SECRET = (process.env.SENIOR_SECRET || "").trim();
+const CLIENT_ID = (process.env.SENIOR_CLIENT_ID || "").trim();
 
 // Detecta o modo: usuário/senha tem prioridade; senão chave/segredo.
 let MODE, PAYLOAD, DEFAULT_PATH;
@@ -63,6 +64,7 @@ function call(method, url, body) {
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
+          ...(CLIENT_ID ? { client_id: CLIENT_ID } : {}),
           ...(payload ? { "Content-Length": Buffer.byteLength(payload) } : {}),
         },
       },
@@ -95,6 +97,7 @@ function mascarar(token) {
   console.log(`auth: ${AUTH_PATH}`);
   console.log(`tenant: ${TENANT}`);
   console.log(`modo: ${MODE === "password" ? "usuário/senha (login)" : "chave/segredo (loginWithKey)"}`);
+  console.log(`client_id: ${CLIENT_ID ? "informado" : "⚠️  AUSENTE (o gateway Sensedia costuma exigir SENIOR_CLIENT_ID)"}`);
 
   const r = await call("POST", `${BASE}${AUTH_PATH}`, PAYLOAD);
   const ok = r.status >= 200 && r.status < 300;
@@ -112,7 +115,13 @@ function mascarar(token) {
   }
 
   // Diagnóstico amigável por status.
-  if (r.status === 400 || r.status === 401) console.log("   → credenciais inválidas (usuário/senha ou chave/segredo, e tenant).");
+  const corpoErro = JSON.stringify(r.json ?? r.raw ?? "");
+  if (/client_id/i.test(corpoErro)) {
+    console.log("   → o GATEWAY barrou por falta de client_id válido. Defina SENIOR_CLIENT_ID");
+    console.log("     (obtido ao criar um aplicativo no portal do desenvolvedor dev.senior.com.br).");
+  } else if (r.status === 400 || r.status === 401) {
+    console.log("   → credenciais inválidas (usuário/senha ou chave/segredo, e tenant).");
+  }
   else if (r.status === 403) console.log("   → chave sem permissão para autenticar.");
   else if (r.status === 404) console.log("   → endpoint não encontrado; ajuste SENIOR_AUTH_PATH conforme a doc do tenant.");
   else if (r.status >= 500) console.log("   → instabilidade na plataforma Senior X.");

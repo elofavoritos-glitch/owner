@@ -83,6 +83,17 @@ describe("lerConfig", () => {
     });
     expect(c!.authPath).toBe("/custom/auth");
   });
+
+  it("lê SENIOR_CLIENT_ID quando presente (e deixa undefined quando ausente)", () => {
+    const comId = lerConfig({
+      SENIOR_USERNAME: "u", SENIOR_PASSWORD: "p", SENIOR_TENANT: "t",
+      SENIOR_CLIENT_ID: "cli-123",
+    });
+    expect(comId!.clientId).toBe("cli-123");
+
+    const semId = lerConfig({ SENIOR_USERNAME: "u", SENIOR_PASSWORD: "p", SENIOR_TENANT: "t" });
+    expect(semId!.clientId).toBeUndefined();
+  });
 });
 
 describe("SeniorClient.autenticar", () => {
@@ -201,6 +212,37 @@ describe("SeniorClient.chamar", () => {
     const r = await client.chamar("/erp/restrito");
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.erro).toMatch(/permiss|escopo/i);
+  });
+});
+
+describe("SeniorClient client_id (header exigido pelo gateway)", () => {
+  const cfgComClientId: SeniorConfig = { ...cfgPassword, clientId: "cli-abc" };
+
+  it("envia client_id no header da autenticação", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(resp(200, { access_token: "t", expires_in: 3600 }));
+    const client = new SeniorClient(cfgComClientId, fetchMock as unknown as typeof fetch);
+    await client.autenticar();
+    const [, init] = fetchMock.mock.calls[0];
+    expect(init.headers.client_id).toBe("cli-abc");
+  });
+
+  it("envia client_id junto com Authorization na chamada de negócio", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(resp(200, { access_token: "tok", expires_in: 3600 }))
+      .mockResolvedValueOnce(resp(200, { ok: true }));
+    const client = new SeniorClient(cfgComClientId, fetchMock as unknown as typeof fetch);
+    await client.chamar("/erp/x");
+    const [, init] = fetchMock.mock.calls[1];
+    expect(init.headers.client_id).toBe("cli-abc");
+    expect(init.headers.Authorization).toBe("tok");
+  });
+
+  it("não inclui client_id no header quando não configurado", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(resp(200, { access_token: "t", expires_in: 3600 }));
+    const client = new SeniorClient(cfgPassword, fetchMock as unknown as typeof fetch);
+    await client.autenticar();
+    const [, init] = fetchMock.mock.calls[0];
+    expect(init.headers.client_id).toBeUndefined();
   });
 });
 
