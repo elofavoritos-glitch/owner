@@ -20,6 +20,7 @@ externos (envio de e-mail, criação de reunião).
 | Geolocalização | `geo_agent/` | Rotas, distâncias e proximidade dos portos (openrouteservice) |
 | Gestão | `sales_management_agent/` | Painel do gestor, metas/ranking, distribuição de leads |
 | Operações | `sales_ops_agent/` | Transcrição de notas para o funil, capacidade de armazém |
+| Senior ERP | `web_app_nextjs/lib/elo-agent.ts` (SYSTEM_PROMPT) | Conhecimento do Senior Gestão Empresarial \| ERP (ref. v5.10.4) integrado ao chat: operação, parametrização, fiscal/contábil, integrações/web services e customização (regras/LSP) |
 
 As políticas de cada agente estão nos arquivos `elo-*.md` na raiz. O agente
 orquestrador é `elo-comercial-integrado.md`.
