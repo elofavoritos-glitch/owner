@@ -13,4 +13,5 @@ SQL (SQL Senior), estrutura de seções/bandas e passo a passo.
 ## Relatórios
 | Arquivo | Descrição |
 |---|---|
+| `cadastro-clientes.md` | Todos os cadastros de clientes: código, nome, CNPJ/CPF, cidade, UF, situação |
 | `propostas-comerciais-ativas.md` | Propostas/pedidos ativos: número, emissão, CNPJ, cliente, despachante, representante |
