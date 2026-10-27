@@ -1,44 +1,41 @@
 # Agente Comercial — ELO Soluções Logísticas Integradas
 
-Conjunto de agentes especializados para apoiar o time comercial de uma empresa de
-logística (armazenagem e transporte rodoviário), em Itajaí/SC. Tudo funciona
-offline por padrão, não inventa dados e exige confirmação humana para efeitos
-externos (envio de e-mail, criação de reunião).
+Assistente de inteligência e capitalização comercial para uma empresa de logística
+(armazenagem e transporte rodoviário), em Itajaí/SC. Não inventa dados, diferencia
+dado confirmado de estimativa e exige confirmação humana para efeitos externos
+(envio de e-mail, criação de reunião).
 
-## Especialistas
+## Onde está o produto
 
-| Especialista | Pasta | O que faz |
-|---|---|---|
-| Word | `word_agent/` | Propostas, cartas, escopos e documentos `.docx` |
-| Excel | `excel_agent/` | Cotações, funil e indicadores `.xlsx` |
-| PowerPoint | `powerpoint_agent/` | Apresentações `.pptx` |
-| PDF | `pdf_agent/` | Propostas e documentos finais `.pdf` |
-| Outlook 365 | `outlook_agent/` | Leitura, resumo diário, agenda, rascunho e reunião (Microsoft Graph) |
-| Inteligência comercial | `sales_intelligence_agent/` | Descoberta, score, dossiê e proposta a partir do dossiê |
-| Ferramentas de vendas | `sales_tools_agent/` | Cotação de frete, dimensionamento, agenda, follow-up, reativação |
-| Conversão | `sales_conversion_agent/` | Qualificação BANT/SPIN, objeções, venda cruzada, ata |
-| Geolocalização | `geo_agent/` | Rotas, distâncias e proximidade dos portos (openrouteservice) |
-| Gestão | `sales_management_agent/` | Painel do gestor, metas/ranking, distribuição de leads |
-| Operações | `sales_ops_agent/` | Transcrição de notas para o funil, capacidade de armazém |
-| Senior ERP | `web_app_nextjs/lib/elo-agent.ts` (SYSTEM_PROMPT) | Conhecimento do Senior Gestão Empresarial \| ERP (ref. v5.10.4) integrado ao chat: operação, parametrização, fiscal/contábil, integrações/web services e customização (regras/LSP) |
+| Pasta | O que é |
+|---|---|
+| **`web_app_nextjs/`** | **O produto vivo.** App Next.js com o assistente (LLM + function-calling), as ferramentas e o conhecimento do Senior ERP. É o que roda em produção. |
+| `docs/` | Documentação de apoio (ex.: `docs/senior-erp-relatorios/` — especificações de relatórios `.GER` do Senior ERP). |
+| `legacy/` | Referência histórica. Suíte Python multi-agente original e as políticas `elo-*.md` que **deram origem** ao app. Não é executada em runtime — veja `legacy/README.md`. |
 
-As políticas de cada agente estão nos arquivos `elo-*.md` na raiz. O agente
-orquestrador é `elo-comercial-integrado.md`.
+> O coração do assistente é `web_app_nextjs/lib/elo-agent.ts` (prompt + catálogo de
+> ferramentas) e `web_app_nextjs/app/api/chat/route.ts` (execução das ferramentas).
+
+## O que o assistente faz
+
+Multifuncional, via ferramentas (function-calling) e conhecimento embutido:
+
+- **Inteligência comercial** — descoberta, score, dossiê e diagnóstico de leads.
+- **Prospecção** — Econodata (dimensionar mercado, prospectar, decisores, match, custo) e Comex/Logcomex.
+- **Documentos** — propostas em PDF e apresentações em PPTX com a identidade da ELO.
+- **Logística** — clima, aeroportos e cálculo de rota.
+- **Produtividade** — briefing do dia, registro de interações, tradução, qualificação de lead.
+- **Senior Gestão Empresarial | ERP (v5.10.4)** — apoio a operação, parametrização,
+  fiscal/contábil, integrações, customização (**Regras/LSP**) e **Gerador de Relatórios/.GER**.
 
 ## Princípios
 
 - Nunca inventar CNPJ, preço, prazo, volume, capacidade ou condição.
 - Diferenciar dado confirmado, estimativa e pendência.
-- Usar apenas a conta/caixa do próprio comercial (Outlook `/me`).
 - Envio de e-mail e criação de reunião só após confirmação humana.
-- Segredos (chaves/tokens) ficam em variáveis de ambiente/Secrets, nunca no código.
+- Segredos (chaves/tokens) ficam em variáveis de ambiente/Secrets, nunca no código
+  (ver `web_app_nextjs/SEGURANCA_PENDENCIAS.md`).
 
-## Integrações que exigem credencial
+## Começar
 
-- **Microsoft 365 (Outlook):** `ELO_M365_TENANT_ID`, `ELO_M365_CLIENT_ID`.
-- **openrouteservice (geo):** `ELO_ORS_API_KEY`.
-- **Logcomex / Econodata:** conectores preparados em `sales_intelligence_agent/connectors/` (ativar quando houver contrato).
-
-## Requisitos
-
-- Python 3 (biblioteca padrão; sem dependências externas obrigatórias).
+Veja `web_app_nextjs/README.md` para desenvolvimento e `GUIA_DEPLOY.md` para deploy.
