@@ -163,6 +163,15 @@ describe("SeniorClient.autenticar", () => {
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.erro).toMatch(/sem token/i);
   });
+
+  it("desembrulha o token do campo aninhado jsonToken (formato real da Senior X)", async () => {
+    const jsonToken = JSON.stringify({ access_token: "tok-aninhado", expires_in: 604800, token_type: "bearer" });
+    const fetchMock = vi.fn().mockResolvedValue(resp(200, { jsonToken }));
+    const client = new SeniorClient(cfgPassword, fetchMock as unknown as typeof fetch);
+    const r = await client.autenticar();
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.dados.token).toBe("tok-aninhado");
+  });
 });
 
 describe("SeniorClient.chamar", () => {

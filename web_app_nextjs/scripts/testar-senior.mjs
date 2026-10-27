@@ -91,6 +91,15 @@ function mascarar(token) {
   return s.length <= 8 ? "****" : `${s.slice(0, 4)}…${s.slice(-4)} (len ${s.length})`;
 }
 
+// Remove tokens/segredos de qualquer texto antes de imprimir (defesa extra para
+// não vazar credenciais no console/log, mesmo em respostas inesperadas).
+function redigir(texto) {
+  return String(texto).replace(
+    /("?(?:access_token|refresh_token|token|jwt|jsonToken|password|secret)"?\s*[:=]\s*)(\\?"?)([^",}\\]+)/gi,
+    (_m, chave, aspa) => `${chave}${aspa}***REDIGIDO***`,
+  );
+}
+
 (async () => {
   console.log("== Smoke test Senior X (autenticação) ==");
   console.log(`base: ${BASE}`);
@@ -101,20 +110,27 @@ function mascarar(token) {
 
   const r = await call("POST", `${BASE}${AUTH_PATH}`, PAYLOAD);
   const ok = r.status >= 200 && r.status < 300;
-  const token = r.json ? (r.json.access_token || r.json.token || r.json.jwt || "") : "";
 
-  console.log(`\n${ok && token ? "✅" : "❌"} loginWithKey  [HTTP ${r.status}]`);
+  // A Senior pode devolver o token direto OU dentro de um JSON string aninhado
+  // (campo "jsonToken"). Desembrulha ambos, sem nunca imprimir o valor cru.
+  let payloadToken = r.json || {};
+  if (payloadToken && typeof payloadToken.jsonToken === "string") {
+    try { payloadToken = JSON.parse(payloadToken.jsonToken); } catch { /* mantém */ }
+  }
+  const token = payloadToken.access_token || payloadToken.token || payloadToken.jwt || "";
+  const validade = payloadToken.expires_in || payloadToken.expiresIn;
+
+  console.log(`\n${ok && token ? "✅" : "❌"} login  [HTTP ${r.status}]`);
 
   if (ok && token) {
     console.log(`   token recebido: ${mascarar(token)}`);
-    if (r.json.expires_in || r.json.expiresIn) {
-      console.log(`   validade (s): ${r.json.expires_in || r.json.expiresIn}`);
-    }
+    if (payloadToken.refresh_token) console.log(`   refresh_token: ${mascarar(payloadToken.refresh_token)}`);
+    if (validade) console.log(`   validade (s): ${validade}`);
     console.log("\nAutenticação OK. Próximo passo: chamar um endpoint de leitura do ERP.");
     process.exit(0);
   }
 
-  // Diagnóstico amigável por status.
+  // Diagnóstico amigável por status. NUNCA imprime o corpo cru se houver token.
   const corpoErro = JSON.stringify(r.json ?? r.raw ?? "");
   if (/client_id/i.test(corpoErro)) {
     console.log("   → o GATEWAY barrou por falta de client_id válido. Defina SENIOR_CLIENT_ID");
@@ -126,7 +142,7 @@ function mascarar(token) {
   else if (r.status === 404) console.log("   → endpoint não encontrado; ajuste SENIOR_AUTH_PATH conforme a doc do tenant.");
   else if (r.status >= 500) console.log("   → instabilidade na plataforma Senior X.");
   else if (r.status === 0) console.log("   → falha de rede/timeout.");
-  console.log("\nResposta (recorte):");
-  console.log(JSON.stringify(r.json ?? r.raw, null, 2).slice(0, 700));
+  console.log("\nResposta (recorte, segredos redigidos):");
+  console.log(redigir(JSON.stringify(r.json ?? r.raw, null, 2)).slice(0, 700));
   process.exit(1);
 })();

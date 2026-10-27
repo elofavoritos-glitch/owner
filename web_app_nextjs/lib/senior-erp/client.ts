@@ -192,14 +192,21 @@ export class SeniorClient {
         return { ok: false, status: resp.status, erro: traduzErroAuth(resp.status, pegarDetalhe(json, txt)) };
       }
 
+      // A Senior X pode devolver o token direto OU embrulhado num JSON string
+      // aninhado no campo `jsonToken` (confirmado com a API real). Desembrulha.
+      let fonte: Record<string, unknown> = json;
+      if (typeof json.jsonToken === "string") {
+        try { fonte = JSON.parse(json.jsonToken) as Record<string, unknown>; } catch { /* mantém json */ }
+      }
+
       // A plataforma pode devolver o token em chaves diferentes conforme o serviço.
-      const token = String(json.access_token ?? json.token ?? json.jwt ?? "").trim();
+      const token = String(fonte.access_token ?? fonte.token ?? fonte.jwt ?? "").trim();
       if (!token) {
         return { ok: false, status: resp.status, erro: "Autenticação Senior X: resposta sem token." };
       }
 
       // expires_in costuma vir em segundos; sem ele, assume 1h de validade.
-      const expiresInSeg = Number(json.expires_in ?? json.expiresIn);
+      const expiresInSeg = Number(fonte.expires_in ?? fonte.expiresIn);
       const ttlMs = Number.isFinite(expiresInSeg) && expiresInSeg > 0 ? expiresInSeg * 1000 : 3_600_000;
       this.cache = { token, expiraEm: Date.now() + ttlMs };
 
