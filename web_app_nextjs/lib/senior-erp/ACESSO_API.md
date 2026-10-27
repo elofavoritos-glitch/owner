@@ -39,6 +39,26 @@ O login direto por usuário/senha não basta para a API. Nesse caso, no mesmo
 gerenciamento de aplicações, gere uma **Chave de Aplicação** (access key +
 secret) — o cliente já suporta esse modo (`loginWithKey`).
 
+## Pré-requisito adicional: "proprietária" (licença do WS de clientes)
+Além de passar pelo gateway, o web service `com.senior.g5.co.cad.clientes`
+exige um **módulo licenciado ("proprietária")** no ERP. Conforme a doc oficial:
+
+| Porta | Proprietária exigida (contém algum) |
+|---|---|
+| `Exportar` (todos os clientes) | **IPSI, IMCR ou VMAIS** |
+| `ConsultarCadastro` | IPSI |
+| `ConsultarGeral` | IPSI ou IMCR |
+
+Fonte: https://documentacao.senior.com.br/gestaoempresarialerp/5.10.4/webservices/pre-requisito-de-proprietaria.htm
+Se a conta não tiver ao menos um desses módulos, o WS retorna erro de licença —
+verificar com o distribuidor/Senior. Obs.: esse erro só aparece **depois** de
+passar pelo gateway (criar o app + liberar APIs); hoje o bloqueio é o gateway.
+
+## Ordem dos obstáculos (mapa)
+1. Autenticar — ✅ OK (token).
+2. **Gateway: app + client_id com APIs liberadas** — 🔒 bloqueio atual (403 route blocked).
+3. Proprietária/licença do WS (IPSI/IMCR/VMAIS) — ⏳ só valida após o passo 2.
+
 ## Como ligar no código depois de liberado
 Definir as variáveis de ambiente (Vercel/Supabase — nunca no repo):
 
