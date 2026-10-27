@@ -32,6 +32,14 @@
       referenciador/HTTP se aplicável), **ou** gerar uma nova restrita e
       atualizar `GOOGLE_TTS_API_KEY` na Vercel, revogando a antiga.
 
+- [ ] **Senha do usuário de integração Senior X** (usuário `intapi`, tenant
+  `elo.log.br`) — a senha foi exposta em chat durante o desenvolvimento e deve
+  ser **trocada** na Plataforma Senior X (Tecnologia → Gestão de Usuários).
+    - Após trocar, atualizar `SENIOR_PASSWORD` apenas por variável de ambiente
+      (Vercel/Supabase) — nunca no repositório.
+    - Ideal: usar um usuário de **integração dedicado**, com permissões mínimas
+      (só os recursos/endpoints que a aplicação consome), não um usuário humano.
+
 ## Boa prática daqui pra frente
 - Nunca colar segredos no chat/assistente nem em arquivos versionados.
 - Toda chave vive só em **variáveis de ambiente** (Vercel/Supabase), nunca no
