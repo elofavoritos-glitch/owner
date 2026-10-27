@@ -392,8 +392,14 @@ function traduzErroAuth(status: number, detalhe: string): string {
 }
 
 function traduzErroChamada(status: number, detalhe: string): string {
+  // Gateway: rota bloqueada / client_id sem permissão nas APIs.
+  if (/route blocked|client_id/i.test(detalhe) || (status === 403 && /blocked/i.test(detalhe))) {
+    return "Rota bloqueada pelo gateway da Senior: o client_id não tem as APIs liberadas. " +
+      "No portal XPlatform API → Minha conta → Dev Tools/Minhas Apps → abra o app → " +
+      "'APIs disponíveis' e selecione as APIs necessárias. Veja lib/senior-erp/ACESSO_API.md.";
+  }
   if (status === 401) return "Token Senior X inválido/expirado e não foi possível renovar.";
-  if (status === 403) return "Sem permissão para este recurso na Senior X (verifique o escopo da chave).";
+  if (status === 403) return "Sem permissão para este recurso na Senior X (verifique o escopo da chave/app).";
   if (status === 404) return "Recurso Senior X não encontrado. Confirme o endpoint na documentação oficial.";
   if (status === 422) return `Dados rejeitados pela Senior X: ${detalhe}`;
   if (status >= 500) return "Instabilidade na plataforma Senior X. Tente novamente.";
