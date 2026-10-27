@@ -4,12 +4,19 @@
 // expõem a inteligência determinística (lib/elo-intelligence.ts).
 import type OpenAI from "openai";
 import { ROTEIRO_DIAGNOSTICO } from "./elo-intelligence";
+import type { ToolName } from "./tool-names";
 
 // O SYSTEM_PROMPT foi fatiado em módulos em ./prompts (comercial + Senior ERP).
 // Re-exportado aqui para manter a API pública deste arquivo inalterada.
 export { SYSTEM_PROMPT } from "./prompts";
 
-export const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
+// Tool da OpenAI com o nome estreitado para ToolName: se algum name abaixo
+// estiver com typo (ou não existir em TOOL_NAMES), o typecheck falha aqui.
+type EloTool = OpenAI.Chat.Completions.ChatCompletionTool & {
+  function: { name: ToolName };
+};
+
+export const TOOLS: EloTool[] = [
   {
     type: "function",
     function: {
@@ -56,6 +63,26 @@ export const TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           },
         },
         required: ["respostas"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "calcular_score",
+      description:
+        "Calcula o score de oportunidade (0-100) explicável de uma empresa a partir de evidências já estruturadas (nota 0..1 por critério). Use quando já houver as evidências em mãos; para avaliar a partir de um diagnóstico bruto, prefira analisar_diagnostico ou montar_dossie.",
+      parameters: {
+        type: "object",
+        properties: {
+          empresa: { type: "string", description: "Nome da empresa avaliada." },
+          evidencias: {
+            type: "object",
+            description:
+              "Evidências por critério. Chaves possíveis: aderencia_icp, potencial_servicos_elo, regiao_rotas, relacionamento_anterior, atividade_logistica, sinal_recente. Cada critério é um objeto { nota (0 a 1), justificativa, fonte, servicos[] }. Em potencial_servicos_elo, use servicos com 'armazenagem' e/ou 'transporte' para recomendar os serviços. Informe apenas o que tiver evidência; não invente notas.",
+          },
+        },
+        required: ["empresa"],
       },
     },
   },
