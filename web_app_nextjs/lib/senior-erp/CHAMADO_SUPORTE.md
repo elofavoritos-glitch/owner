@@ -55,3 +55,38 @@ em um sistema interno.
 **Ambiente de origem da integração:** aplicação web (servidor), chamadas HTTPS.
 
 ---
+
+## O que JÁ testamos (para agilizar o atendimento)
+
+Já fizemos toda a configuração possível pelo lado do admin do tenant, e o
+bloqueio persiste. Detalhes técnicos:
+
+1. **Autenticação por usuário/senha FUNCIONA**:
+   `POST https://api.senior.com.br/platform/authentication/actions/login`
+   com `intapi@elo.log.br` retorna token (HTTP 200).
+
+2. **Criamos uma Chave de Aplicação** (menu Tecnologia > Administração >
+   Gerenciamento de Aplicações, app "apielo"/"api da elo"), com access key e
+   secret. Ao tentar `loginWithKey`
+   (`/platform/authentication/anonymous/actions/loginWithKey` com
+   `accessKey`/`secret`/`tenantName`), o gateway responde **HTTP 401
+   "Client Id in the request, identified by ANY client_id, is invalid"**.
+
+3. **Vinculamos um papel à aplicação** (Autorização > Gestão de Papéis), mas o
+   comportamento não mudou.
+
+4. **Qualquer chamada a APIs de negócio** em
+   `https://platform.senior.com.br/t/elo.log.br/...` (mesmo com token válido de
+   usuário/senha) retorna **HTTP 403 "Request blocked by the administrator -
+   route blocked"**, inclusive em endpoints básicos (ex.: usuário logado).
+
+**Pedido objetivo ao suporte:**
+- Informar/registrar o **`client_id`** válido para o tenant `elo.log.br` a ser
+  usado no header das chamadas (ou habilitar o consumo via chave de aplicação
+  sem client_id).
+- **Liberar o consumo das APIs públicas/privadas** do ERP para o tenant (remover
+  o "route blocked"), em especial o cadastro de clientes
+  (`com.senior.g5.co.cad.clientes`, porta `Exportar`).
+- Confirmar a **proprietária** necessária (IPSI/IMCR/VMAIS) para a porta `Exportar`.
+
+---
