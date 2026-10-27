@@ -33,6 +33,11 @@ export type SeniorConfig = {
   authPath: string;  // path da primitiva de autenticação
   authMode: SeniorAuthMode;
   tenant: string;    // domínio do tenant (ex.: suaempresa.com.br)
+  // client_id do aplicativo cadastrado no portal do desenvolvedor da Senior.
+  // O gateway (Sensedia) exige este header em TODAS as requisições; sem ele a
+  // chamada é barrada com "Client Id in the request ... is invalid" (HTTP 401),
+  // mesmo que usuário/senha estejam corretos. Não é segredo, mas é obrigatório.
+  clientId?: string;
   // credenciais (preenchidas conforme o modo)
   username?: string; // modo "password"
   password?: string; // modo "password"
@@ -61,6 +66,7 @@ export function lerConfig(env: EnvVars = process.env): SeniorConfig | null {
 
   const baseUrl = (env.SENIOR_API_BASE_URL || DEFAULT_BASE_URL).trim().replace(/\/+$/, "");
   const authPathEnv = (env.SENIOR_AUTH_PATH || "").trim();
+  const clientId = (env.SENIOR_CLIENT_ID || "").trim() || undefined;
 
   const username = (env.SENIOR_USERNAME || "").trim();
   const password = (env.SENIOR_PASSWORD || "").trim();
@@ -74,6 +80,7 @@ export function lerConfig(env: EnvVars = process.env): SeniorConfig | null {
       authPath: authPathEnv || DEFAULT_AUTH_PATH_PASSWORD,
       authMode: "password",
       tenant,
+      clientId,
       username,
       password,
     };
@@ -85,6 +92,7 @@ export function lerConfig(env: EnvVars = process.env): SeniorConfig | null {
       authPath: authPathEnv || DEFAULT_AUTH_PATH_KEY,
       authMode: "key",
       tenant,
+      clientId,
       accessKey,
       secret,
     };
@@ -142,6 +150,20 @@ export class SeniorClient {
   }
 
   /**
+   * Monta os headers base, incluindo o `client_id` quando configurado.
+   * O gateway Sensedia da Senior exige esse header em todas as requisições.
+   */
+  private headersBase(extra?: Record<string, string>): Record<string, string> {
+    const h: Record<string, string> = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(extra ?? {}),
+    };
+    if (this.cfg.clientId) h.client_id = this.cfg.clientId;
+    return h;
+  }
+
+  /**
    * Autentica na plataforma (via `login` com usuário/senha, ou `loginWithKey`
    * com chave/segredo, conforme a config) e devolve o token (cacheado enquanto
    * válido). `forcar` ignora o cache (usado ao receber 401 numa chamada).
@@ -157,10 +179,7 @@ export class SeniorClient {
     try {
       const resp = await this.fetchImpl(url, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
+        headers: this.headersBase(),
         body: JSON.stringify(this.corpoAutenticacao()),
         signal: controller.signal,
       });
@@ -173,14 +192,21 @@ export class SeniorClient {
         return { ok: false, status: resp.status, erro: traduzErroAuth(resp.status, pegarDetalhe(json, txt)) };
       }
 
+      // A Senior X pode devolver o token direto OU embrulhado num JSON string
+      // aninhado no campo `jsonToken` (confirmado com a API real). Desembrulha.
+      let fonte: Record<string, unknown> = json;
+      if (typeof json.jsonToken === "string") {
+        try { fonte = JSON.parse(json.jsonToken) as Record<string, unknown>; } catch { /* mantém json */ }
+      }
+
       // A plataforma pode devolver o token em chaves diferentes conforme o serviço.
-      const token = String(json.access_token ?? json.token ?? json.jwt ?? "").trim();
+      const token = String(fonte.access_token ?? fonte.token ?? fonte.jwt ?? "").trim();
       if (!token) {
         return { ok: false, status: resp.status, erro: "Autenticação Senior X: resposta sem token." };
       }
 
       // expires_in costuma vir em segundos; sem ele, assume 1h de validade.
-      const expiresInSeg = Number(json.expires_in ?? json.expiresIn);
+      const expiresInSeg = Number(fonte.expires_in ?? fonte.expiresIn);
       const ttlMs = Number.isFinite(expiresInSeg) && expiresInSeg > 0 ? expiresInSeg * 1000 : 3_600_000;
       this.cache = { token, expiraEm: Date.now() + ttlMs };
 
@@ -212,11 +238,7 @@ export class SeniorClient {
       try {
         return await this.fetchImpl(`${this.cfg.baseUrl}${caminho}`, {
           method: metodo,
-          headers: {
-            Authorization: token,
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
+          headers: this.headersBase({ Authorization: token }),
           body: corpo !== undefined ? JSON.stringify(corpo) : undefined,
           signal: controller.signal,
         });
@@ -263,6 +285,10 @@ function pegarDetalhe(json: Record<string, unknown> | null, bruto: string): stri
 }
 
 function traduzErroAuth(status: number, detalhe: string): string {
+  if (/client_id/i.test(detalhe)) {
+    return "O gateway da Senior barrou a requisição por client_id inválido/ausente. " +
+      "Defina SENIOR_CLIENT_ID com o client_id do aplicativo (portal dev.senior.com.br).";
+  }
   if (status === 400 || status === 401) {
     return "Credenciais Senior X inválidas (usuário/senha ou chave/segredo, e tenant). Verifique as credenciais informadas.";
   }
